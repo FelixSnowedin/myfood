@@ -13,7 +13,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); }
 button, input, select { font: inherit; color: inherit; }
-input, select { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+input:not([type=checkbox]), select { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
 button { padding: 10px 14px; border: 0; border-radius: 8px; background: var(--accent); color: var(--bg); cursor: pointer; }
 button:disabled { opacity: .5; }
 button.secondary, button.link { background: transparent; color: var(--accent); }
@@ -21,7 +21,7 @@ label { display: grid; gap: 4px; font-size: .9rem; color: var(--muted); }
 h1 { font-size: 1.2rem; margin: 0; }
 h2 { font-size: 1rem; margin: 16px 0 8px; }
 
-.app { max-width: 640px; margin: 0 auto; padding: 0 16px 88px; }
+.app { max-width: 640px; margin: 0 auto; padding: 0 16px calc(88px + env(safe-area-inset-bottom)); }
 header { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; }
 .login { max-width: 360px; margin: 15vh auto 0; }
@@ -34,7 +34,6 @@ header { display: flex; justify-content: space-between; align-items: center; pad
 .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
 .controls input[type=search] { grid-column: 1 / -1; }
 .check { display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; color: var(--text); }
-.check input { width: auto; }
 
 .rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .row { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
@@ -50,10 +49,10 @@ header { display: flex; justify-content: space-between; align-items: center; pad
 .segmented button[aria-pressed=true] { background: var(--accent); color: var(--bg); }
 .camera { width: 100%; border-radius: 12px; background: #000; aspect-ratio: 4 / 3; object-fit: cover; margin-bottom: 12px; }
 
-.overlay { position: fixed; inset: 0; background: rgb(0 0 0 / .4); display: grid; place-items: end center; padding: 16px; overflow: auto; }
+.overlay { position: fixed; inset: 0; z-index: 30; background: rgb(0 0 0 / .4); display: grid; place-items: end center; padding: 16px; overflow: auto; }
 .dialog { width: 100%; max-width: 480px; }
-.toast { position: fixed; left: 16px; right: 16px; bottom: 76px; max-width: 608px; margin: 0 auto; background: var(--text); color: var(--bg); border-radius: 10px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.toast button { background: transparent; color: var(--bg); text-decoration: underline; padding: 4px; }
-.tabs { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--card); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+.toast { position: fixed; z-index: 20; left: 16px; right: 16px; bottom: calc(76px + env(safe-area-inset-bottom)); max-width: 608px; margin: 0 auto; background: var(--text); color: var(--bg); border-radius: 10px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.toast button { background: transparent; color: var(--bg); text-decoration: underline; min-height: 44px; padding: 4px 8px; }
+.tabs { position: fixed; z-index: 10; left: 0; right: 0; bottom: 0; display: flex; background: var(--card); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
 .tabs button { flex: 1; background: transparent; color: var(--muted); border-radius: 0; padding: 16px 4px; }
 .tabs button[aria-current=page] { color: var(--accent); font-weight: 600; }
