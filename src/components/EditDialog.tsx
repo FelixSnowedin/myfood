@@ -85,66 +85,83 @@ export function EditDialog({ row, onClose, onSaved, notify }: Props) {
   }
 
   return (
-    <dialog ref={ref} className="dialog" aria-labelledby={titleId} onClose={onClose} onCancel={(e) => busy && e.preventDefault()}>
-      <form className="card" onSubmit={save}>
-        <h2 id={titleId}>{row.product.name} bearbeiten</h2>
-        <label>
-          Name
-          <input required pattern=".*\S.*" value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label>
-          Barcode
-          <input inputMode="numeric" value={barcode} onChange={(e) => setBarcode(e.target.value)} />
-        </label>
-        <label>
-          Kategorie
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            {CATEGORIES.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Mindestbestand
-          <input type="number" min={0} required value={minStock} onChange={(e) => setMinStock(Number(e.target.value))} />
-        </label>
-        <label>
-          Menge
-          <input type="number" min={1} required value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} />
-        </label>
-        <label>
-          MHD
-          <input type="date" value={bestBefore} onChange={(e) => setBestBefore(e.target.value)} />
-        </label>
-        <label>
-          Füllstand
-          <select value={fill} onChange={(e) => setFill(e.target.value as FillLevel)}>
-            {(Object.keys(FILL_LABEL) as FillLevel[]).map((f) => (
-              <option key={f} value={f}>
-                {FILL_LABEL[f]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Geplant für
-          <input value={plannedFor} placeholder="z. B. Lasagne Sonntag" onChange={(e) => setPlannedFor(e.target.value)} />
-        </label>
-        {error && <p className="error">{error}</p>}
-        <div className="actions">
-          <button disabled={busy}>Speichern</button>
+    <dialog ref={ref} className="sheet" aria-labelledby={titleId} onClose={onClose} onCancel={(e) => busy && e.preventDefault()}>
+      <form onSubmit={save}>
+        <header className="sheet-head">
+          <h2 id={titleId}>{row.product.name}</h2>
+          <button type="button" className="icon" aria-label="Schließen" disabled={busy} onClick={onClose}>
+            ✕
+          </button>
+        </header>
+        <div className="sheet-body">
+          <h3>Dieser Eintrag</h3>
+          <div className="pair">
+            <label>
+              Menge
+              <input type="number" inputMode="numeric" min={1} required value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} />
+            </label>
+            <label>
+              MHD
+              <input type="date" value={bestBefore} onChange={(e) => setBestBefore(e.target.value)} />
+            </label>
+          </div>
+          <div className="pair">
+            <label>
+              Füllstand
+              <select value={fill} onChange={(e) => setFill(e.target.value as FillLevel)}>
+                {(Object.keys(FILL_LABEL) as FillLevel[]).map((f) => (
+                  <option key={f} value={f}>
+                    {FILL_LABEL[f]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Geplant für
+              <input value={plannedFor} placeholder="z. B. Lasagne" onChange={(e) => setPlannedFor(e.target.value)} />
+            </label>
+          </div>
+
+          <h3>Produkt</h3>
+          <label>
+            Name
+            <input required pattern=".*\S.*" value={name} onChange={(e) => setName(e.target.value)} />
+          </label>
+          <div className="pair">
+            <label>
+              Kategorie
+              <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                {CATEGORIES.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Mindestbestand
+              <input type="number" inputMode="numeric" min={0} required value={minStock} onChange={(e) => setMinStock(Number(e.target.value))} />
+            </label>
+          </div>
+          <label>
+            Barcode
+            <input inputMode="numeric" value={barcode} onChange={(e) => setBarcode(e.target.value)} />
+          </label>
+
+          <div className="actions danger">
+            <button type="button" disabled={busy} onClick={removeEntry}>
+              Eintrag löschen
+            </button>
+            <button type="button" disabled={busy} onClick={removeProduct}>
+              Produkt löschen
+            </button>
+          </div>
+        </div>
+        <footer className="sheet-foot">
+          {error && <p className="error">{error}</p>}
           <button type="button" className="secondary" disabled={busy} onClick={onClose}>
             Abbrechen
           </button>
-        </div>
-        <div className="actions danger">
-          <button type="button" disabled={busy} onClick={removeEntry}>
-            Eintrag löschen
-          </button>
-          <button type="button" disabled={busy} onClick={removeProduct}>
-            Produkt löschen
-          </button>
-        </div>
+          <button disabled={busy}>Speichern</button>
+        </footer>
       </form>
     </dialog>
   );
