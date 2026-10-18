@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { CATEGORIES } from '../categories';
+import { CATEGORIES, categoryOf } from '../categories';
 import { addStock, createProduct, updateProduct } from '../api';
 import { findProductByName } from '../inventory';
 import type { Notify, Product } from '../types';
@@ -26,19 +26,15 @@ export function AddForm({ products, initial, onSaved, notify, onDone }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const barcode = initial?.barcode ?? null;
-
-  function changeName(value: string) {
-    setName(value);
-    const known = findProductByName(products, value);
-    if (known) setCategory(known.category);
-  }
+  // An existing product keeps its own category; the select just shows it.
+  const known = (barcode ? products.find((p) => p.barcode === barcode) : undefined) ?? findProductByName(products, name);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      let product = (barcode ? products.find((p) => p.barcode === barcode) : undefined) ?? findProductByName(products, name);
+      let product = known;
       if (!product) product = await createProduct({ name: name.trim(), barcode, category });
       else if (barcode && !product.barcode) await updateProduct(product.id, { barcode });
       await addStock(product.id, quantity, bestBefore || null);
@@ -50,8 +46,10 @@ export function AddForm({ products, initial, onSaved, notify, onDone }: Props) {
       setBestBefore('');
       onDone?.();
     } catch (err) {
-      // Inputs stay as they are so nothing has to be retyped.
+      // Inputs stay as they are so nothing has to be retyped; reload so a retry
+      // finds a product that was already created before the failure.
       setError((err as Error).message);
+      void onSaved();
     } finally {
       setBusy(false);
     }
@@ -63,7 +61,7 @@ export function AddForm({ products, initial, onSaved, notify, onDone }: Props) {
       {barcode && <p className="hint">Barcode {barcode}</p>}
       <label>
         Name
-        <input required list="product-names" autoComplete="off" value={name} onChange={(e) => changeName(e.target.value)} />
+        <input required pattern=".*\S.*" list="product-names" autoComplete="off" value={name} onChange={(e) => setName(e.target.value)} />
       </label>
       <datalist id="product-names">
         {products.map((p) => (
@@ -72,7 +70,7 @@ export function AddForm({ products, initial, onSaved, notify, onDone }: Props) {
       </datalist>
       <label>
         Kategorie
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
+        <select disabled={!!known} value={known ? categoryOf(known.category) : category} onChange={(e) => setCategory(e.target.value)}>
           {CATEGORIES.map((c) => (
             <option key={c}>{c}</option>
           ))}

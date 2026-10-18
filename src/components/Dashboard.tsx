@@ -61,27 +61,32 @@ export function Dashboard({ products, stock, onChange, onSaved, notify }: Props)
         <section key={g.title || 'alle'}>
           {g.title && <h2>{g.title}</h2>}
           <ul className="rows">
-            {g.rows.map((r) => (
-              <li key={r.id} className={`row ${expiryStatus(r.best_before, today)}`}>
-                <button className="main" onClick={() => setEditing(r)}>
-                  <span className="name">{r.product.name}</span>
-                  <span className="meta">
-                    {r.quantity}×{r.best_before && ` · MHD ${formatDate(r.best_before)}`}
-                    {r.planned_for && ` · geplant: ${r.planned_for}`}
-                  </span>
-                </button>
-                <button
-                  className="fill"
-                  aria-label={`Füllstand ${FILL_LABEL[r.fill_level]}, antippen zum Weiterschalten`}
-                  onClick={() => void onChange('advance', r, r.product)}
-                >
-                  {FILL_ICON[r.fill_level]}
-                </button>
-                <button className="minus" aria-label={`Eins ${r.product.name} verbrauchen`} onClick={() => void onChange('consume', r, r.product)}>
-                  −1
-                </button>
-              </li>
-            ))}
+            {g.rows.map((r) => {
+              const status = expiryStatus(r.best_before, today);
+              const fillHint = r.fill_level === 'fast_leer' ? 'antippen verbraucht eins' : 'antippen zum Weiterschalten';
+              return (
+                <li key={r.id} className={`row ${status}`}>
+                  <button className="main" onClick={() => setEditing(r)}>
+                    <span className="name">{r.product.name}</span>
+                    <span className="meta">
+                      {r.quantity}×{r.best_before && ` · MHD ${formatDate(r.best_before)}`}
+                      {status === 'expired' && ' · abgelaufen'}
+                      {r.planned_for && ` · geplant: ${r.planned_for}`}
+                    </span>
+                  </button>
+                  <button
+                    className="fill"
+                    aria-label={`${r.product.name}: Füllstand ${FILL_LABEL[r.fill_level]}, ${fillHint}`}
+                    onClick={() => void onChange('advance', r, r.product)}
+                  >
+                    {FILL_ICON[r.fill_level]}
+                  </button>
+                  <button className="minus" aria-label={`Eins ${r.product.name} verbrauchen`} onClick={() => void onChange('consume', r, r.product)}>
+                    −1
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </section>
       ))}
