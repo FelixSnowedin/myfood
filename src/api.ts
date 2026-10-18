@@ -11,9 +11,9 @@ async function run<T>(query: PromiseLike<{ data: unknown; error: { message: stri
 // Unique-key violations are the DB errors a user can trigger with normal input.
 function friendly(error: { message: string; code?: string }): string {
   if (error.code !== '23505') return error.message;
-  if (error.message.includes('barcode')) return 'Dieser Barcode gehört schon zu einem anderen Produkt.';
+  if (error.message.includes('barcode')) return 'Dieser Barcode gehÃ¶rt schon zu einem anderen Produkt.';
   if (error.message.includes('shopping_items')) return 'Das steht schon auf dem Zettel.';
-  return 'Für dieses Produkt gibt es schon einen Eintrag mit diesem MHD. Dort die Menge ändern und diesen Eintrag löschen.';
+  return 'FÃ¼r dieses Produkt gibt es schon einen Eintrag mit diesem MHD. Dort die Menge Ã¤ndern und diesen Eintrag lÃ¶schen.';
 }
 
 // Fails when nothing matched, e.g. another device deleted the row meanwhile.
