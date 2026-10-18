@@ -26,3 +26,19 @@ export interface Toast {
 export type Notify = (toast: Toast) => void;
 export type ChangeKind = 'consume' | 'advance';
 export type ChangeFn = (kind: ChangeKind, item: StockItem, product: Product) => Promise<void>;
+
+export interface ShoppingList {
+  id: string;
+  created_at: string;
+  finished_at: string | null;
+}
+
+export interface ShoppingItem {
+  id: string;
+  list_id: string;
+  product_id: string | null; // null = free text
+  name: string;
+  quantity: number;
+  checked: boolean;
+  created_at: string;
+}
