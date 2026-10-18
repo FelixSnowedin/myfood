@@ -5,6 +5,7 @@ import { describeChange } from './inventory';
 import { supabase } from './supabase';
 import type { ChangeFn, Notify, Toast } from './types';
 import { useInventory } from './useInventory';
+import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Login';
 
 type Tab = 'bestand' | 'scan' | 'add';
@@ -74,7 +75,7 @@ function Main() {
       </header>
       {error && <p className="error">Laden fehlgeschlagen: {error}</p>}
       <main>
-        {tab === 'bestand' && <p>Bestand folgt ({stock.length} Einträge, {products.length} Produkte)</p>}
+        {tab === 'bestand' && <Dashboard products={products} stock={stock} onChange={change} onSaved={reload} notify={notify} />}
         {tab === 'scan' && <p>Scanner folgt</p>}
         {tab === 'add' && <p>Formular folgt</p>}
       </main>
