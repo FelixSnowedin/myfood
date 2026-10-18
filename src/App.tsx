@@ -8,6 +8,7 @@ import { useInventory } from './useInventory';
 import { AddForm } from './components/AddForm';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Login';
+import { Scanner } from './components/Scanner';
 
 type Tab = 'bestand' | 'scan' | 'add';
 const TABS: [Tab, string][] = [['bestand', 'Bestand'], ['scan', 'Scannen'], ['add', 'Hinzufügen']];
@@ -77,7 +78,7 @@ function Main() {
       {error && <p className="error">Laden fehlgeschlagen: {error}</p>}
       <main>
         {tab === 'bestand' && <Dashboard products={products} stock={stock} onChange={change} onSaved={reload} notify={notify} />}
-        {tab === 'scan' && <p>Scanner folgt</p>}
+        {tab === 'scan' && <Scanner products={products} stock={stock} onChange={change} onSaved={reload} notify={notify} />}
         {tab === 'add' && <AddForm products={products} onSaved={reload} notify={notify} />}
       </main>
       {toast && (
