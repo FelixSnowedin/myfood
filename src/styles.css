@@ -11,9 +11,12 @@
   }
 }
 * { box-sizing: border-box; }
+/* Safety net: never let a too-wide element widen the page (iOS would start zoomed in). */
+html { overflow-x: clip; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--text); }
 button, input, select { font: inherit; color: inherit; }
-input:not([type=checkbox]), select { width: 100%; min-width: 0; min-height: 44px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+/* 16px: below that iOS zooms in on focus and doesn't zoom back out. */
+input:not([type=checkbox]), select { width: 100%; min-width: 0; min-height: 44px; padding: 10px; font-size: 1rem; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
 /* iOS gives date inputs their own size and min-width; make them look like the other fields (the picker stays native). */
 input[type=date] { -webkit-appearance: none; appearance: none; text-align: left; }
 input[type=date]::-webkit-date-and-time-value { text-align: left; }
@@ -26,7 +29,8 @@ h2 { font-size: 1rem; margin: 16px 0 8px; }
 
 .app { max-width: 640px; margin: 0 auto; padding: 0 16px calc(88px + env(safe-area-inset-bottom)); }
 header { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; }
+/* minmax(0, …) columns: WebKit sizes selects by their longest option and won't shrink them otherwise. */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .login { max-width: 360px; margin: 15vh auto 0; }
 .error { color: var(--red); margin: 0; }
 .hint, .empty { color: var(--muted); margin: 0; }
@@ -34,15 +38,15 @@ header { display: flex; justify-content: space-between; align-items: center; pad
 .actions.danger button { background: transparent; color: var(--red); padding-left: 0; }
 
 .low ul { margin: 0; padding-left: 18px; }
-.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+.controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
 .controls input[type=search] { grid-column: 1 / -1; }
 .check { display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; color: var(--text); }
 
-.rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rows { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .row { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
 .row.expired { background: var(--red-bg); border-color: var(--red); }
 .row.soon { background: var(--yellow-bg); }
-.row .main { flex: 1; display: grid; text-align: left; background: transparent; color: var(--text); padding: 8px; }
+.row .main { flex: 1; min-width: 0; overflow-wrap: anywhere; display: grid; text-align: left; background: transparent; color: var(--text); padding: 8px; }
 .row .meta { font-size: .85rem; color: var(--muted); }
 .row .fill { background: transparent; color: var(--accent); letter-spacing: -2px; min-width: 48px; min-height: 44px; }
 .row .minus { min-width: 52px; min-height: 44px; font-weight: 600; }
@@ -59,7 +63,7 @@ body:has(dialog[open]) { overflow: hidden; }
 .sheet form { display: flex; flex-direction: column; max-height: 90vh; max-height: 90dvh; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 4px 4px 16px; border-bottom: 1px solid var(--line); }
 .sheet-head h2 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sheet-body { flex: 1; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 0 16px 16px; display: grid; gap: 12px; }
+.sheet-body { flex: 1; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 0 16px 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .sheet-body h3 { margin: 12px 0 0; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 .sheet-foot { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
 .sheet-foot .error { flex-basis: 100%; }
