@@ -17,6 +17,7 @@ create table public.shopping_items (
   checked boolean not null default false,
   created_at timestamptz not null default now()
 );
+create index shopping_items_list_id on public.shopping_items (list_id);
 -- A product appears at most once per list.
 create unique index shopping_items_one_per_product on public.shopping_items (list_id, product_id) where product_id is not null;
 
@@ -29,11 +30,12 @@ grant select, insert, update, delete on table public.shopping_lists, public.shop
 revoke all on table public.shopping_lists, public.shopping_items from anon;
 
 -- Id of the open list; creates it if there is none (the partial index keeps it unique under races).
+-- FOR SHARE waits for a running finish_list, so nothing is added to a list that is being archived.
 create function public.open_list()
 returns uuid language plpgsql set search_path = '' as $$
 declare v_list uuid;
 begin
-  select id into v_list from public.shopping_lists where finished_at is null;
+  select id into v_list from public.shopping_lists where finished_at is null for share;
   if found then return v_list; end if;
   insert into public.shopping_lists default values on conflict do nothing returning id into v_list;
   if v_list is null then
@@ -42,7 +44,8 @@ begin
   return v_list;
 end $$;
 
--- Adds to the open list; an item already on it (same product, or same free text) gets more quantity.
+-- Adds to the open list; an item already on it (same product, or same free text) gets more
+-- quantity and counts as still to buy again.
 create function public.add_to_list(p_product_id uuid, p_name text, p_quantity int default 1)
 returns public.shopping_items language plpgsql set search_path = '' as $$
 declare
@@ -53,11 +56,14 @@ begin
     insert into public.shopping_items (list_id, product_id, name, quantity)
     values (v_list, p_product_id, trim(p_name), p_quantity)
     on conflict (list_id, product_id) where product_id is not null
-      do update set quantity = shopping_items.quantity + excluded.quantity
+      do update set quantity = shopping_items.quantity + excluded.quantity, checked = false
     returning * into v_item;
   else
-    update public.shopping_items set quantity = quantity + p_quantity
-      where list_id = v_list and product_id is null and lower(trim(name)) = lower(trim(p_name))
+    -- Exactly one row: free-text duplicates can exist (undo, races), and RETURNING INTO allows only one.
+    update public.shopping_items set quantity = quantity + p_quantity, checked = false
+      where id = (select id from public.shopping_items
+                  where list_id = v_list and product_id is null and lower(trim(name)) = lower(trim(p_name))
+                  order by created_at limit 1)
       returning * into v_item;
     if not found then
       insert into public.shopping_items (list_id, name, quantity)
@@ -84,7 +90,8 @@ begin
       where o.list_id = v_list
         and (o.product_id = i.product_id
              or (i.product_id is null and o.product_id is null and lower(trim(o.name)) = lower(trim(i.name))))
-    );
+    )
+  on conflict do nothing;
   get diagnostics v_count = row_count;
   return v_count;
 end $$;
@@ -100,24 +107,32 @@ declare
   v_booking jsonb;
   v_item public.shopping_items;
   v_product uuid;
+  v_qty int;
   v_count int := 0;
 begin
   select finished_at into v_finished from public.shopping_lists where id = p_list for update;
   if not found then raise exception 'Diesen Einkauf gibt es nicht mehr.'; end if;
   if v_finished is not null then raise exception 'Dieser Einkauf wurde schon abgeschlossen.'; end if;
+  -- Freeze the items: a check/uncheck during finishing must not book and move the same item.
+  perform 1 from public.shopping_items where list_id = p_list for update;
 
   for v_booking in select value from jsonb_array_elements(coalesce(p_bookings, '[]'::jsonb)) loop
     select * into v_item from public.shopping_items
       where id = (v_booking->>'item_id')::uuid and list_id = p_list and checked;
     if not found then continue; end if;
+    v_qty := (v_booking->>'quantity')::int;
+    if v_qty is null or v_qty < 1 then
+      raise exception 'Menge für „%“ muss mindestens 1 sein.', v_item.name;
+    end if;
     v_product := v_item.product_id;
     if v_product is null then
-      select id into v_product from public.products where lower(trim(name)) = lower(trim(v_item.name)) limit 1;
+      select id into v_product from public.products
+        where lower(trim(name)) = lower(trim(v_item.name)) order by created_at limit 1;
       if v_product is null then
         insert into public.products (name) values (trim(v_item.name)) returning id into v_product;
       end if;
     end if;
-    perform public.add_stock(v_product, (v_booking->>'quantity')::int, nullif(v_booking->>'best_before', '')::date);
+    perform public.add_stock(v_product, v_qty, nullif(v_booking->>'best_before', '')::date);
     v_count := v_count + 1;
   end loop;
 
