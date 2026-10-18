@@ -14,7 +14,6 @@ export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
     return () => data.subscription.unsubscribe();
   }, []);
@@ -26,9 +25,9 @@ export default function App() {
 function Main() {
   const { products, stock, error, reload } = useInventory();
   const [tab, setTab] = useState<Tab>('bestand');
-  const [toast, setToast] = useState<(Toast & { id: number }) | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
 
-  const notify: Notify = useCallback((t) => setToast({ ...t, id: Date.now() }), []);
+  const notify: Notify = useCallback((t) => setToast({ ...t }), []);
 
   useEffect(() => {
     if (!toast) return;
@@ -71,7 +70,7 @@ function Main() {
     <div className="app">
       <header>
         <h1>myfood</h1>
-        <button className="link" onClick={() => void supabase.auth.signOut()}>Abmelden</button>
+        <button className="link" onClick={() => void supabase.auth.signOut({ scope: 'local' })}>Abmelden</button>
       </header>
       {error && <p className="error">Laden fehlgeschlagen: {error}</p>}
       <main>
