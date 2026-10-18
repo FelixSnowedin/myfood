@@ -42,7 +42,11 @@ function Main() {
     async (kind, item, product) => {
       try {
         const prev = await (kind === 'consume' ? consume(item.id) : advanceFill(item.id));
-        if (!prev) return notify({ text: 'Nicht im Bestand' });
+        if (!prev) {
+          // Row already gone (e.g. double tap): keep a pending undo, just refresh.
+          setToast((t) => (t?.undo ? t : { text: 'Nicht im Bestand' }));
+          return void reload();
+        }
         notify({
           text: describeChange(kind, prev, product.name),
           undo: async () => {

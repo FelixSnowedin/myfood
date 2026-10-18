@@ -15,6 +15,7 @@ export function EditDialog({ row, onClose, onSaved, notify }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const [name, setName] = useState(row.product.name);
+  const [barcode, setBarcode] = useState(row.product.barcode ?? '');
   const [category, setCategory] = useState<string>(categoryOf(row.product.category));
   const [minStock, setMinStock] = useState(row.product.min_stock);
   const [quantity, setQuantity] = useState(row.quantity);
@@ -56,6 +57,7 @@ export function EditDialog({ row, onClose, onSaved, notify }: Props) {
     if ((plannedFor.trim() || null) !== row.planned_for) stockPatch.planned_for = plannedFor.trim() || null;
     const productPatch: Parameters<typeof updateProduct>[1] = {};
     if (name.trim() !== row.product.name) productPatch.name = name.trim();
+    if ((barcode.trim() || null) !== row.product.barcode) productPatch.barcode = barcode.trim() || null;
     if (category !== row.product.category) productPatch.category = category;
     if (minStock !== row.product.min_stock) productPatch.min_stock = minStock;
     void act(async () => {
@@ -89,6 +91,10 @@ export function EditDialog({ row, onClose, onSaved, notify }: Props) {
         <label>
           Name
           <input required pattern=".*\S.*" value={name} onChange={(e) => setName(e.target.value)} />
+        </label>
+        <label>
+          Barcode
+          <input inputMode="numeric" value={barcode} onChange={(e) => setBarcode(e.target.value)} />
         </label>
         <label>
           Kategorie

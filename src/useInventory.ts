@@ -3,6 +3,8 @@ import { loadProducts, loadStock } from './api';
 import { supabase } from './supabase';
 import type { Product, StockItem } from './types';
 
+let channelCount = 0;
+
 // ponytail: any change reloads both tables; a household's inventory is small
 export function useInventory() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -27,7 +29,7 @@ export function useInventory() {
     void reload();
     // Unique name per mount: a channel still leaving must not be reused.
     const channel = supabase
-      .channel(`inventory-${crypto.randomUUID()}`)
+      .channel(`inventory-${++channelCount}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => void reload())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stock' }, () => void reload())
       .subscribe((status, err) => {

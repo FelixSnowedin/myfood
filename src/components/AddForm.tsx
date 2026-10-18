@@ -27,7 +27,10 @@ export function AddForm({ products, initial, onSaved, notify, onDone }: Props) {
   const [busy, setBusy] = useState(false);
   const barcode = initial?.barcode ?? null;
   // An existing product keeps its own category; the select just shows it.
-  const known = (barcode ? products.find((p) => p.barcode === barcode) : undefined) ?? findProductByName(products, name);
+  const byBarcode = barcode ? products.find((p) => p.barcode === barcode) : undefined;
+  const known = byBarcode ?? findProductByName(products, name);
+  // One barcode per product: a different scanned code on a name match is not stored.
+  const barcodeLost = !!(barcode && known?.barcode && known.barcode !== barcode);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -61,8 +64,13 @@ export function AddForm({ products, initial, onSaved, notify, onDone }: Props) {
       {barcode && <p className="hint">Barcode {barcode}</p>}
       <label>
         Name
-        <input required pattern=".*\S.*" list="product-names" autoComplete="off" value={name} onChange={(e) => setName(e.target.value)} />
+        <input required readOnly={!!byBarcode} pattern=".*\S.*" list="product-names" autoComplete="off" value={name} onChange={(e) => setName(e.target.value)} />
       </label>
+      {barcodeLost && (
+        <p className="hint">
+          „{known?.name}“ hat schon einen anderen Barcode. Dieser Barcode wird nicht gespeichert; für Scan-Verbrauchen einen eigenen Namen wählen.
+        </p>
+      )}
       <datalist id="product-names">
         {products.map((p) => (
           <option key={p.id} value={p.name} />
