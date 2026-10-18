@@ -23,6 +23,7 @@ input[type=date]::-webkit-date-and-time-value { text-align: left; }
 button { padding: 10px 14px; border: 0; border-radius: 8px; background: var(--accent); color: var(--bg); cursor: pointer; }
 button:disabled { opacity: .5; }
 button.secondary, button.link { background: transparent; color: var(--accent); }
+button.link { min-height: 44px; }
 label { display: grid; gap: 4px; min-width: 0; font-size: .9rem; color: var(--muted); }
 h1 { font-size: 1.2rem; margin: 0; }
 h2 { font-size: 1rem; margin: 16px 0 8px; }
@@ -57,7 +58,7 @@ header { display: flex; justify-content: space-between; align-items: center; pad
 .camera { width: 100%; border-radius: 12px; background: #000; aspect-ratio: 4 / 3; object-fit: cover; margin-bottom: 12px; }
 
 /* Bottom sheet: sized to the visible viewport (dvh), only the body scrolls, actions stay pinned. */
-body:has(dialog[open]) { overflow: hidden; }
+html:has(dialog[open]) { overflow: hidden; }
 .sheet { width: 100%; max-width: 640px; max-height: 90vh; max-height: 90dvh; margin: auto auto 0; padding: 0; border: 0; border-radius: 16px 16px 0 0; background: var(--card); color: var(--text); overflow: hidden; }
 .sheet::backdrop { background: rgb(0 0 0 / .4); }
 .sheet form { display: flex; flex-direction: column; max-height: 90vh; max-height: 90dvh; }
@@ -98,6 +99,8 @@ button.icon { background: transparent; color: var(--text); min-width: 44px; min-
 /* Stays above the tab bar while the list scrolls; --tabs-h is measured in Task 7. */
 .finish-bar { position: sticky; bottom: calc(var(--tabs-h, 52px) + env(safe-area-inset-bottom)); padding: 8px 0; background: var(--bg); }
 .finish-bar button { width: 100%; min-height: 48px; }
+/* On the shopping tab the toast sits above the finish bar (8 + 48 + 8 px) instead of covering it. */
+.app:has(.finish-bar) .toast { bottom: calc(var(--tabs-h, 52px) + 72px + env(safe-area-inset-bottom)); }
 .archive-head { padding: 8px 0; }
 .archive-row { width: 100%; min-height: 52px; display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); text-align: left; }
 .copy-action { margin-top: 12px; }
