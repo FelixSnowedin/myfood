@@ -5,6 +5,7 @@ import { describeChange } from './inventory';
 import { supabase } from './supabase';
 import type { ChangeFn, Notify, Toast } from './types';
 import { useInventory } from './useInventory';
+import { AddForm } from './components/AddForm';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Login';
 
@@ -77,7 +78,7 @@ function Main() {
       <main>
         {tab === 'bestand' && <Dashboard products={products} stock={stock} onChange={change} onSaved={reload} notify={notify} />}
         {tab === 'scan' && <p>Scanner folgt</p>}
-        {tab === 'add' && <p>Formular folgt</p>}
+        {tab === 'add' && <AddForm products={products} onSaved={reload} notify={notify} />}
       </main>
       {toast && (
         <div className="toast" role="status">
