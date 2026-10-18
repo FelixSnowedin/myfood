@@ -1,17 +1,18 @@
 import { CATEGORIES, categoryOf } from './categories';
 import { lowStock } from './inventory';
-import type { Product, ShoppingItem, StockItem } from './types';
+import type { Booking, Product, ShoppingItem, StockItem } from './types';
 
 export interface Suggestion {
   product: Product;
   quantity: number; // missing amount up to the minimum
 }
 
-/** Products below their minimum that are not on the list yet. */
+/** Products below their minimum that are not on the list yet (as product or as same-name free text). */
 export function suggestions(products: Product[], stock: StockItem[], items: ShoppingItem[]): Suggestion[] {
   const onList = new Set(items.map((item) => item.product_id));
+  const textOnList = new Set(items.filter((item) => item.product_id === null).map((item) => item.name.trim().toLowerCase()));
   return lowStock(products, stock)
-    .filter(({ product }) => !onList.has(product.id))
+    .filter(({ product }) => !onList.has(product.id) && !textOnList.has(product.name.trim().toLowerCase()))
     .map(({ product, total }) => ({ product, quantity: product.min_stock - total }));
 }
 
@@ -40,12 +41,6 @@ export interface FinishRow {
   book: boolean;
   quantity: number;
   bestBefore: string; // '' = no date
-}
-
-export interface Booking {
-  item_id: string;
-  quantity: number;
-  best_before: string | null;
 }
 
 /** Rows of the finish sheet: checked items; products are booked by default, free text is not. */

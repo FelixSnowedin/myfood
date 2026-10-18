@@ -1,6 +1,5 @@
 import { supabase } from './supabase';
-import type { Booking } from './shopping';
-import type { Product, ShoppingItem, ShoppingList, StockItem } from './types';
+import type { Booking, Product, ShoppingItem, ShoppingList, StockItem } from './types';
 
 async function run<T>(query: PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }>): Promise<T> {
   const { data, error } = await query;
@@ -17,7 +16,7 @@ function friendly(error: { message: string; code?: string }): string {
 }
 
 // Fails when nothing matched, e.g. another device deleted the row meanwhile.
-async function updateOne(table: 'products' | 'stock', id: string, patch: object, gone: string) {
+async function updateOne(table: 'products' | 'stock' | 'shopping_items', id: string, patch: object, gone: string) {
   const rows = await run<{ id: string }[]>(supabase.from(table).update(patch).eq('id', id).select('id'));
   if (!rows.length) throw new Error(gone);
 }
@@ -58,7 +57,7 @@ export const loadListItems = (listId: string) => run<ShoppingItem[]>(supabase.fr
 export const addToList = (productId: string | null, name: string, quantity = 1) =>
   run<ShoppingItem>(supabase.rpc('add_to_list', { p_product_id: productId, p_name: name, p_quantity: quantity }));
 export const updateItem = (id: string, patch: Partial<Pick<ShoppingItem, 'quantity' | 'checked'>>) =>
-  run<null>(supabase.from('shopping_items').update(patch).eq('id', id));
+  updateOne('shopping_items', id, patch, 'Den Eintrag gibt es nicht mehr.');
 export const deleteItem = (id: string) => run<null>(supabase.from('shopping_items').delete().eq('id', id));
 /** Undo of a removal: adds it back to the open list (merges if it was re-added meanwhile). */
 export const restoreItem = (prev: ShoppingItem) => addToList(prev.product_id, prev.name, prev.quantity);

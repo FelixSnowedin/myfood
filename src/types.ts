@@ -42,3 +42,9 @@ export interface ShoppingItem {
   checked: boolean;
   created_at: string;
 }
+
+export interface Booking {
+  item_id: string;
+  quantity: number;
+  best_before: string | null;
+}

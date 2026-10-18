@@ -19,6 +19,9 @@ describe('suggestions', () => {
   it('leaves out products already on the list', () => {
     expect(suggestions(products, stock, [i('i1', 'Milch', 'p1')]).map((x) => x.product.name)).toEqual(['Butter']);
   });
+  it('also leaves out products that are on the list as free text with the same name', () => {
+    expect(suggestions(products, stock, [i('i1', ' milch ', null)]).map((x) => x.product.name)).toEqual(['Butter']);
+  });
 });
 
 describe('arrangeList', () => {
