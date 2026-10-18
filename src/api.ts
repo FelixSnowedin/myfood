@@ -9,6 +9,10 @@ async function run<T>(query: PromiseLike<{ data: unknown; error: { message: stri
 
 // Unique-key violations are the DB errors a user can trigger with normal input.
 function friendly(error: { message: string; code?: string }): string {
+  // Shopping-list SQL not run yet: functions/tables unknown to PostgREST or Postgres.
+  if (['PGRST202', 'PGRST205', '42P01', '42883'].includes(error.code ?? '')) {
+    return 'Datenbank noch nicht eingerichtet: supabase/2026-10-18-einkaufszettel.sql im Supabase SQL Editor ausführen.';
+  }
   if (error.code !== '23505') return error.message;
   if (error.message.includes('barcode')) return 'Dieser Barcode gehört schon zu einem anderen Produkt.';
   if (error.message.includes('shopping_items')) return 'Das steht schon auf dem Zettel.';

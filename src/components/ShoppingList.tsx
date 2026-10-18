@@ -28,6 +28,7 @@ export function ShoppingList({ products, stock, notify, onStockChanged }: Props)
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const proposals = suggestions(products, stock, items);
   const { open, checked } = arrangeList(items, products);
+  const loaded = listId !== null && !error; // nothing to suggest or call empty before the list has loaded
 
   useEffect(() => {
     if (finishing && listId && finishing !== listId) {
@@ -149,7 +150,7 @@ export function ShoppingList({ products, stock, notify, onStockChanged }: Props)
         </button>
       </form>
 
-      {proposals.length > 0 && (
+      {loaded && proposals.length > 0 && (
         <section className="card low">
           <div className="low-head">
             <h2>Wird knapp</h2>
@@ -173,7 +174,7 @@ export function ShoppingList({ products, stock, notify, onStockChanged }: Props)
         </section>
       )}
 
-      {items.length === 0 && <p className="empty">Der Zettel ist leer.</p>}
+      {loaded && items.length === 0 && <p className="empty">Der Zettel ist leer.</p>}
       {open.map((g) => (
         <section key={g.title}>
           <h2>{g.title}</h2>

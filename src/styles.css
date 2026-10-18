@@ -97,11 +97,11 @@ button.icon { background: transparent; color: var(--text); min-width: 44px; min-
 .item > .qty { padding-right: 12px; }
 .item .step { min-width: 44px; min-height: 44px; padding: 0; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 1.25rem; }
 .archive-link { display: block; margin: 16px auto; }
-/* Stays above the tab bar while the list scrolls; --tabs-h is measured in Task 7. */
-.finish-bar { position: sticky; bottom: calc(var(--tabs-h, 52px) + env(safe-area-inset-bottom)); padding: 8px 0; background: var(--bg); }
+/* Stays above the tab bar while the list scrolls. */
+.finish-bar { position: sticky; bottom: calc(var(--tabs-h) + env(safe-area-inset-bottom)); padding: 8px 0; background: var(--bg); }
 .finish-bar button { width: 100%; min-height: 48px; }
 /* On the shopping tab the toast sits above the finish bar (8 + 48 + 8 px) instead of covering it. */
-.app:has(.finish-bar) .toast { bottom: calc(var(--tabs-h, 52px) + 72px + env(safe-area-inset-bottom)); }
+.app:has(.finish-bar) .toast { bottom: calc(var(--tabs-h) + 72px + env(safe-area-inset-bottom)); }
 .archive-head { padding: 8px 0; }
 .archive-row { width: 100%; min-height: 52px; display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); text-align: left; }
 .copy-action { margin-top: 12px; }

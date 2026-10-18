@@ -77,7 +77,7 @@ export function FinishSheet({ listId, items, onClose, onFinished }: Props) {
                 <div className="pair">
                   <label>
                     Menge
-                    <input type="number" inputMode="numeric" min={1} required aria-label={`Menge ${r.item.name}`}value={r.quantity} onChange={(e) => update(i, { quantity: Number(e.target.value) })} />
+                    <input type="number" inputMode="numeric" min={1} required aria-label={`Menge ${r.item.name}`} value={r.quantity} onChange={(e) => update(i, { quantity: Number(e.target.value) })} />
                   </label>
                   <label>
                     MHD
