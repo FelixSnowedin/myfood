@@ -9,9 +9,10 @@ import { AddForm } from './components/AddForm';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Login';
 import { Scanner } from './components/Scanner';
+import { ShoppingList } from './components/ShoppingList';
 
-type Tab = 'bestand' | 'scan' | 'add';
-const TABS: [Tab, string][] = [['bestand', 'Bestand'], ['scan', 'Scannen'], ['add', 'Hinzufügen']];
+type Tab = 'bestand' | 'einkauf' | 'scan' | 'add';
+const TABS: [Tab, string][] = [['bestand', 'Bestand'], ['einkauf', 'Einkauf'], ['scan', 'Scannen'], ['add', 'Hinzufügen']];
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
@@ -82,6 +83,7 @@ function Main() {
       {error && <p className="error">Laden fehlgeschlagen: {error}</p>}
       <main>
         {tab === 'bestand' && <Dashboard products={products} stock={stock} onChange={change} onSaved={reload} notify={notify} />}
+        {tab === 'einkauf' && <ShoppingList products={products} stock={stock} notify={notify} onStockChanged={reload} />}
         {tab === 'scan' && <Scanner products={products} stock={stock} onChange={change} onSaved={reload} notify={notify} />}
         {tab === 'add' && <AddForm products={products} onSaved={reload} notify={notify} />}
       </main>
