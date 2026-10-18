@@ -1,10 +1,11 @@
-import { CATEGORIES } from './categories';
+import { CATEGORIES, categoryOf } from './categories';
 import type { ChangeKind, FillLevel, Product, StockItem } from './types';
 
 export const FILL_LABEL: Record<FillLevel, string> = { voll: 'voll', angebrochen: 'angebrochen', fast_leer: 'fast leer' };
 
 const NO_DATE = '9999-12-31';
-const byDate = (a: StockItem, b: StockItem) => (a.best_before ?? NO_DATE).localeCompare(b.best_before ?? NO_DATE);
+const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+const byDate = (a: StockItem, b: StockItem) => cmp(a.best_before ?? NO_DATE, b.best_before ?? NO_DATE);
 const byName = (a: Row, b: Row) => a.product.name.localeCompare(b.product.name, 'de');
 
 export function todayISO(now = new Date()): string {
@@ -83,7 +84,7 @@ export interface Group {
 const COMPARE: Record<SortKey, (a: Row, b: Row) => number> = {
   mhd: (a, b) => byDate(a, b) || byName(a, b),
   name: (a, b) => byName(a, b) || byDate(a, b),
-  neu: (a, b) => b.created_at.localeCompare(a.created_at),
+  neu: (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
 };
 
 export function buildView(products: Product[], stock: StockItem[], opts: ViewOptions): Group[] {
@@ -95,10 +96,9 @@ export function buildView(products: Product[], stock: StockItem[], opts: ViewOpt
       return product ? [{ ...s, product }] : [];
     })
     .filter((r) => !query || r.product.name.toLowerCase().includes(query))
-    .filter((r) => !opts.category || r.product.category === opts.category)
+    .filter((r) => !opts.category || categoryOf(r.product.category) === opts.category)
     .sort(COMPARE[opts.sort]);
 
   if (!opts.group) return rows.length ? [{ title: '', rows }] : [];
-  const groupOf = (r: Row) => ((CATEGORIES as readonly string[]).includes(r.product.category) ? r.product.category : 'Sonstiges');
-  return CATEGORIES.map((title) => ({ title, rows: rows.filter((r) => groupOf(r) === title) })).filter((g) => g.rows.length);
+  return CATEGORIES.map((title) => ({ title, rows: rows.filter((r) => categoryOf(r.product.category) === title) })).filter((g) => g.rows.length);
 }

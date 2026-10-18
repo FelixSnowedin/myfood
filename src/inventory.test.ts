@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addDays, buildView, describeChange, expiryStatus, findProductByName, formatDate, lowStock, pickConsumeTarget,
+  addDays, buildView, describeChange, expiryStatus, findProductByName, formatDate, lowStock, pickConsumeTarget, todayISO,
 } from './inventory';
 import type { Product, StockItem } from './types';
 
@@ -12,6 +12,12 @@ const s = (id: string, product_id: string, quantity: number, best_before: string
 describe('dates', () => {
   it('adds days across month boundaries', () => {
     expect(addDays('2026-10-30', 3)).toBe('2026-11-02');
+  });
+  it('adds days across year boundaries', () => {
+    expect(addDays('2026-12-30', 3)).toBe('2027-01-02');
+  });
+  it('takes today from the local calendar date', () => {
+    expect(todayISO(new Date(2026, 9, 18, 23, 30))).toBe('2026-10-18');
   });
   it('classifies expiry relative to today', () => {
     const today = '2026-10-18';
@@ -66,6 +72,11 @@ describe('lowStock', () => {
     const stock = [s('a', 'p1', 1, null), s('b', 'p3', 1, null), s('c', 'p4', 2, null)];
     expect(lowStock(products, stock).map((l) => [l.product.name, l.total])).toEqual([['Butter', 0], ['Milch', 1]]);
   });
+  it('sums all entries of a product', () => {
+    const products = [p('p1', 'Milch', 'Milchprodukte', 3), p('p2', 'Butter', 'Milchprodukte', 3)];
+    const stock = [s('a', 'p1', 2, '2026-10-20'), s('b', 'p1', 1, '2026-10-25'), s('c', 'p2', 1, '2026-10-20'), s('d', 'p2', 1, null)];
+    expect(lowStock(products, stock).map((l) => [l.product.name, l.total])).toEqual([['Butter', 2]]);
+  });
 });
 
 describe('buildView', () => {
@@ -98,6 +109,9 @@ describe('buildView', () => {
     expect(byName[0].rows.map((r) => r.product.name)).toEqual(['Alt', 'Apfel', 'Käse', 'Milch', 'Milch']);
     const newest = buildView(products, stock, { ...base, group: false, sort: 'neu' });
     expect(newest[0].rows.map((r) => r.id)).toEqual(['d', 'a', 'c', 'b', 'e']);
+  });
+  it('treats unknown categories as Sonstiges when filtering', () => {
+    expect(buildView(products, stock, { ...base, category: 'Sonstiges' }).flatMap((g) => g.rows.map((r) => r.id))).toEqual(['e']);
   });
   it('returns no groups when nothing matches', () => {
     expect(buildView(products, stock, { ...base, search: 'xyz' })).toEqual([]);

@@ -14,7 +14,7 @@ export function parseOffResponse(json: OffResponse | null): OffResult | null {
   if (json?.status !== 1 || !json.product) return null;
   const p = json.product;
   return {
-    name: (p.product_name_de || p.product_name || '').trim(),
+    name: p.product_name_de?.trim() || p.product_name?.trim() || '',
     category: categoryFromOffTags(p.categories_tags ?? []),
   };
 }
@@ -24,6 +24,7 @@ export async function fetchOffProduct(barcode: string): Promise<OffResult | null
   try {
     const res = await fetch(
       `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}?fields=product_name,product_name_de,categories_tags`,
+      { signal: AbortSignal.timeout(8000) }, // OFF sometimes stalls; fall back to manual entry
     );
     if (!res.ok) return null;
     return parseOffResponse(await res.json());

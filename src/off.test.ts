@@ -6,6 +6,9 @@ describe('parseOffResponse', () => {
     const json = { status: 1, product: { product_name: 'Milk', product_name_de: 'Vollmilch ', categories_tags: ['en:milks'] } };
     expect(parseOffResponse(json)).toEqual({ name: 'Vollmilch', category: 'Milchprodukte' });
   });
+  it('skips a blank German name', () => {
+    expect(parseOffResponse({ status: 1, product: { product_name_de: ' ', product_name: 'Milk' } })).toEqual({ name: 'Milk', category: 'Sonstiges' });
+  });
   it('falls back to the generic name and Sonstiges', () => {
     expect(parseOffResponse({ status: 1, product: { product_name: 'Thing' } })).toEqual({ name: 'Thing', category: 'Sonstiges' });
   });
