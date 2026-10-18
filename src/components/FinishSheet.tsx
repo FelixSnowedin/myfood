@@ -28,15 +28,27 @@ export function FinishSheet({ listId, items, onClose, onFinished }: Props) {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    // Checked on another device meanwhile: show it instead of silently archiving it unbooked.
+    const known = new Set(rows.map((r) => r.item.id));
+    const added = items.filter((item) => item.checked && !known.has(item.id));
+    if (added.length) {
+      setRows((current) => [...current, ...initialFinishRows(added)]);
+      setError('Der Zettel hat sich geändert. Bitte prüfen und erneut abschließen.');
+      return;
+    }
     setBusy(true);
     setError(null);
+    let booked: number;
     try {
-      await onFinished(await finishList(listId, buildBookings(rows)));
+      booked = await finishList(listId, buildBookings(rows));
     } catch (err) {
       // All or nothing in the DB: the sheet stays open with every input intact.
       setError((err as Error).message);
       setBusy(false);
+      return;
     }
+    // Already committed: a failing reload must not offer a retry of a finished list.
+    await onFinished(booked).catch(() => {});
   }
 
   const toBook = rows.filter((r) => r.book).length;
@@ -53,7 +65,7 @@ export function FinishSheet({ listId, items, onClose, onFinished }: Props) {
         <div className="sheet-body">
           <p className="hint">Was in den Bestand soll, mit Menge und optional MHD.</p>
           {rows.map((r, i) => (
-            <fieldset key={r.item.id} className="booking">
+            <fieldset key={r.item.id} className="booking" aria-label={r.item.name}>
               <label className="check">
                 <input type="checkbox" checked={r.book} onChange={(e) => update(i, { book: e.target.checked })} />
                 <span>
@@ -65,11 +77,11 @@ export function FinishSheet({ listId, items, onClose, onFinished }: Props) {
                 <div className="pair">
                   <label>
                     Menge
-                    <input type="number" inputMode="numeric" min={1} required value={r.quantity} onChange={(e) => update(i, { quantity: Number(e.target.value) })} />
+                    <input type="number" inputMode="numeric" min={1} required aria-label={`Menge ${r.item.name}`}value={r.quantity} onChange={(e) => update(i, { quantity: Number(e.target.value) })} />
                   </label>
                   <label>
                     MHD
-                    <input type="date" value={r.bestBefore} onChange={(e) => update(i, { bestBefore: e.target.value })} />
+                    <input type="date" aria-label={`MHD ${r.item.name}`} value={r.bestBefore} onChange={(e) => update(i, { bestBefore: e.target.value })} />
                   </label>
                 </div>
               )}
