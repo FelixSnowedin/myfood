@@ -1,46 +1,18 @@
-/* Themes: --accent = identity and "consume" (green/terracotta/teal), --action = main actions.
-   All text/background pairs checked for WCAG AA (>= 4.5:1).
-   ponytail: b and c are temporary prototypes for comparison; remove the losers after the decision. */
+/* Calm base, herb green for identity and actions, rounded Nunito (self-hosted).
+   All text/background pairs checked for WCAG AA (>= 4.5:1). */
 :root {
   --tabs-h: 54px;
   color-scheme: light dark;
-  /* A · Frischer Markt */
   --font: 'Nunito Variable', ui-rounded, system-ui, sans-serif;
-  --radius: 10px; --radius-lg: 14px;
-  --bg: #fbf8f2; --card: #ffffff; --text: #1f2a1f; --muted: #5b6758; --line: #e5dfd2;
-  --accent: #2e7d32; --on-accent: #ffffff; --action: #c2410c; --on-action: #ffffff;
-  --red: #b42318; --red-bg: #fde6df; --yellow-bg: #fff3d1;
-}
-/* B · Warme Küche */
-:root[data-theme=b] {
-  --font: 'Figtree Variable', system-ui, sans-serif;
-  --radius: 10px; --radius-lg: 12px;
-  --bg: #faf5ec; --card: #fffdf8; --text: #2b2118; --muted: #6a5d52; --line: #e8dccb;
-  --accent: #a63d1c; --on-accent: #ffffff; --action: #53682a; --on-action: #ffffff;
-  --red: #b42318; --red-bg: #fbe2da; --yellow-bg: #fbefd2;
-}
-/* C · Klar und ruhig */
-:root[data-theme=c] {
-  --font: 'Inter Variable', system-ui, sans-serif;
   --radius: 6px; --radius-lg: 8px;
   --bg: #f5f7f6; --card: #ffffff; --text: #1b1d1c; --muted: #59615e; --line: #dfe4e2;
-  --accent: #0f766e; --on-accent: #ffffff; --action: #0f766e; --on-action: #ffffff;
+  --accent: #2e7d32; --on-accent: #ffffff; --action: #2e7d32; --on-action: #ffffff;
   --red: #b42318; --red-bg: #fdeae7; --yellow-bg: #fff3d6;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #131913; --card: #1c231c; --text: #e8eee5; --muted: #a9b3a5; --line: #323b31;
-    --accent: #81c784; --on-accent: #0f160f; --action: #f4a06a; --on-action: #1f1208;
-    --red: #ff8a80; --red-bg: #3f1d19; --yellow-bg: #3a3117;
-  }
-  :root[data-theme=b] {
-    --bg: #1a1511; --card: #241d17; --text: #f2e9df; --muted: #b8aa9c; --line: #3e342b;
-    --accent: #f2956f; --on-accent: #1f0f08; --action: #b9cd7f; --on-action: #151a0a;
-    --red: #ff8a80; --red-bg: #3f1d19; --yellow-bg: #3a3117;
-  }
-  :root[data-theme=c] {
     --bg: #111514; --card: #1a201f; --text: #e5ebe9; --muted: #a0aaa7; --line: #2e3735;
-    --accent: #5fc6b8; --on-accent: #06201d; --action: #5fc6b8; --on-action: #06201d;
+    --accent: #81c784; --on-accent: #0f160f; --action: #81c784; --on-action: #0f160f;
     --red: #ff8a80; --red-bg: #3f1d19; --yellow-bg: #3a3117;
   }
 }
@@ -64,8 +36,6 @@ h2 { font-size: 1.05rem; font-weight: 700; margin: 16px 0 8px; }
 
 .app { max-width: 640px; margin: 0 auto; padding: 0 16px calc(88px + env(safe-area-inset-bottom)); }
 header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 0; }
-.header-actions { display: flex; align-items: center; gap: 4px; }
-.theme-switch { width: auto; padding: 4px 8px; }
 /* minmax(0, …) columns: WebKit sizes selects by their longest option and won't shrink them otherwise. */
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .login { max-width: 360px; margin: 15vh auto 0; }
