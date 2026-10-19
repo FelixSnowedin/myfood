@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { advanceFill, consume, restoreStock } from './api';
 import { describeChange } from './inventory';
 import { supabase } from './supabase';
+import { applyTheme, loadTheme, THEMES, type Theme } from './theme';
 import type { ChangeFn, Notify, Toast } from './types';
 import { useInventory } from './useInventory';
 import { AddForm } from './components/AddForm';
@@ -30,6 +31,12 @@ function Main() {
   const { products, stock, error, reload } = useInventory();
   const [tab, setTab] = useState<Tab>('bestand');
   const [toast, setToast] = useState<Toast | null>(null);
+  const [theme, setTheme] = useState<Theme>(loadTheme);
+
+  function changeTheme(next: Theme) {
+    setTheme(next);
+    applyTheme(next);
+  }
 
   const notify: Notify = useCallback((t) => setToast({ ...t }), []);
 
@@ -78,7 +85,16 @@ function Main() {
     <div className="app">
       <header>
         <h1>myfood</h1>
-        <button className="link" onClick={() => void supabase.auth.signOut({ scope: 'local' })}>Abmelden</button>
+        <div className="header-actions">
+          <select className="theme-switch" aria-label="Stil (Test)" value={theme} onChange={(e) => changeTheme(e.target.value as Theme)}>
+            {THEMES.map(([id, label]) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <button className="link" onClick={() => void supabase.auth.signOut({ scope: 'local' })}>Abmelden</button>
+        </div>
       </header>
       {error && <p className="error">Laden fehlgeschlagen: {error}</p>}
       <main>
