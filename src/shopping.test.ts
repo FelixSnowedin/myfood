@@ -47,13 +47,17 @@ describe('finish rows', () => {
   const items = [i('i1', 'Milch', 'p1', 2, true), i('i2', 'Grillkohle', null, 1, true), i('i3', 'Käse', 'p3', 1, false)];
 
   it('starts with checked items only; products booked, free text not', () => {
-    expect(initialFinishRows(items).map((r) => [r.item.id, r.book, r.quantity, r.bestBefore])).toEqual([
+    expect(initialFinishRows(items, [], '2026-10-28').map((r) => [r.item.id, r.book, r.quantity, r.bestBefore])).toEqual([
       ['i1', true, 2, ''],
       ['i2', false, 1, ''],
     ]);
   });
+  it('prefills the MHD of products with learned days', () => {
+    const milk = { ...p('p1', 'Milch'), mhd_days_sum: 15, mhd_days_count: 2 }; // 7.5 → 7
+    expect(initialFinishRows(items, [milk], '2026-10-28').map((r) => r.bestBefore)).toEqual(['2026-11-04', '']);
+  });
   it('builds bookings for rows marked to book, empty date as null', () => {
-    const rows = initialFinishRows(items);
+    const rows = initialFinishRows(items, [], '2026-10-28');
     rows[1] = { ...rows[1], book: true, bestBefore: '2026-11-01' };
     expect(buildBookings(rows)).toEqual([
       { item_id: 'i1', quantity: 2, best_before: null },

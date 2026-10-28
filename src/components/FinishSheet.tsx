@@ -1,19 +1,21 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { finishList } from '../api';
+import { todayISO } from '../inventory';
 import { buildBookings, initialFinishRows, type FinishRow } from '../shopping';
-import type { ShoppingItem } from '../types';
+import type { Product, ShoppingItem } from '../types';
 
 interface Props {
   listId: string;
   items: ShoppingItem[];
+  products: Product[];
   onClose: () => void;
   onFinished: (booked: number) => Promise<void>;
 }
 
-export function FinishSheet({ listId, items, onClose, onFinished }: Props) {
+export function FinishSheet({ listId, items, products, onClose, onFinished }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
-  const [rows, setRows] = useState<FinishRow[]>(() => initialFinishRows(items));
+  const [rows, setRows] = useState<FinishRow[]>(() => initialFinishRows(items, products, todayISO()));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -32,7 +34,7 @@ export function FinishSheet({ listId, items, onClose, onFinished }: Props) {
     const known = new Set(rows.map((r) => r.item.id));
     const added = items.filter((item) => item.checked && !known.has(item.id));
     if (added.length) {
-      setRows((current) => [...current, ...initialFinishRows(added)]);
+      setRows((current) => [...current, ...initialFinishRows(added, products, todayISO())]);
       setError('Der Zettel hat sich geändert. Bitte prüfen und erneut abschließen.');
       return;
     }
@@ -63,7 +65,10 @@ export function FinishSheet({ listId, items, onClose, onFinished }: Props) {
           </button>
         </header>
         <div className="sheet-body">
-          <p className="hint">Was in den Bestand soll, mit Menge und optional MHD.</p>
+          <p className="hint">
+            Was in den Bestand soll, mit Menge und optional MHD.
+            {rows.some((r) => r.item.product_id && r.bestBefore) && ' MHDs sind aus früheren Einkäufen vorbelegt, bitte prüfen.'}
+          </p>
           {rows.map((r, i) => (
             <fieldset key={r.item.id} className="booking" aria-label={r.item.name}>
               <label className="check">

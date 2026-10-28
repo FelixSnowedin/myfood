@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addDays, buildView, describeChange, expiryStatus, findProductByName, formatDate, lowStock, pickConsumeTarget, todayISO,
+  addDays, buildView, describeChange, expiryStatus, findProductByName, formatDate, lowStock, pickConsumeTarget, suggestBestBefore, todayISO,
 } from './inventory';
 import type { Product, StockItem } from './types';
 
@@ -26,6 +26,12 @@ describe('dates', () => {
     expect(expiryStatus('2026-10-18', today)).toBe('soon');
     expect(expiryStatus('2026-10-21', today)).toBe('soon');
     expect(expiryStatus('2026-10-22', today)).toBe('ok');
+  });
+  it('suggests a best-before date from the rounded-down mean', () => {
+    const milk = { ...p('p1', 'Milch'), mhd_days_sum: 23, mhd_days_count: 3 }; // 7.67 → 7
+    expect(suggestBestBefore(milk, '2026-12-28')).toBe('2027-01-04');
+    expect(suggestBestBefore(p('p2', 'Neu'), '2026-12-28')).toBe('');
+    expect(suggestBestBefore(undefined, '2026-12-28')).toBe('');
   });
   it('formats ISO dates German style', () => {
     expect(formatDate('2026-10-05')).toBe('05.10.2026');

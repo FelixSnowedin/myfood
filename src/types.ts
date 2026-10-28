@@ -7,6 +7,9 @@ export interface Product {
   category: string;
   min_stock: number;
   created_at: string;
+  // Missing until supabase/2026-10-28-mhd-vorschlag.sql has been run.
+  mhd_days_sum?: number;
+  mhd_days_count?: number;
 }
 
 export interface StockItem {

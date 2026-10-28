@@ -18,6 +18,12 @@ export function addDays(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Today + mean learned days, rounded down (rather too early than too late); '' if nothing learned yet. */
+export function suggestBestBefore(product: Product | undefined, today: string): string {
+  if (!product?.mhd_days_count) return '';
+  return addDays(today, Math.floor((product.mhd_days_sum ?? 0) / product.mhd_days_count));
+}
+
 export function formatDate(iso: string): string {
   return iso.split('-').reverse().join('.');
 }

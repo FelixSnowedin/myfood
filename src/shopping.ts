@@ -1,5 +1,5 @@
 import { CATEGORIES, categoryOf } from './categories';
-import { lowStock } from './inventory';
+import { lowStock, suggestBestBefore } from './inventory';
 import type { Booking, Product, ShoppingItem, StockItem } from './types';
 
 export interface Suggestion {
@@ -43,11 +43,16 @@ export interface FinishRow {
   bestBefore: string; // '' = no date
 }
 
-/** Rows of the finish sheet: checked items; products are booked by default, free text is not. */
-export function initialFinishRows(items: ShoppingItem[]): FinishRow[] {
+/** Rows of the finish sheet: checked items; products are booked by default with a suggested MHD, free text is not. */
+export function initialFinishRows(items: ShoppingItem[], products: Product[], today: string): FinishRow[] {
   return items
     .filter((item) => item.checked)
-    .map((item) => ({ item, book: item.product_id !== null, quantity: item.quantity, bestBefore: '' }));
+    .map((item) => ({
+      item,
+      book: item.product_id !== null,
+      quantity: item.quantity,
+      bestBefore: suggestBestBefore(products.find((p) => p.id === item.product_id), today),
+    }));
 }
 
 export function buildBookings(rows: FinishRow[]): Booking[] {

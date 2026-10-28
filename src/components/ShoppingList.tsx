@@ -202,6 +202,7 @@ export function ShoppingList({ products, stock, notify, onStockChanged }: Props)
         <FinishSheet
           listId={finishing}
           items={items}
+          products={products}
           onClose={() => setFinishing(null)}
           onFinished={async (booked) => {
             setFinishing(null);

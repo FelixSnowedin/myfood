@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { CATEGORIES, categoryOf } from '../categories';
 import { addStock, createProduct, updateProduct } from '../api';
-import { findProductByName } from '../inventory';
+import { findProductByName, suggestBestBefore, todayISO } from '../inventory';
 import type { Notify, Product } from '../types';
 
 export interface AddInitial {
@@ -22,7 +22,7 @@ export function AddForm({ products, initial, onSaved, notify, onDone }: Props) {
   const [name, setName] = useState(initial?.name ?? '');
   const [category, setCategory] = useState(initial?.category ?? 'Sonstiges');
   const [quantity, setQuantity] = useState(1);
-  const [bestBefore, setBestBefore] = useState('');
+  const [bestBefore, setBestBefore] = useState<string | null>(null); // null = untouched, show the suggestion
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const barcode = initial?.barcode ?? null;
@@ -31,6 +31,8 @@ export function AddForm({ products, initial, onSaved, notify, onDone }: Props) {
   const known = byBarcode ?? findProductByName(products, name);
   // One barcode per product: a different scanned code on a name match is not stored.
   const barcodeLost = !!(barcode && known?.barcode && known.barcode !== barcode);
+  const suggested = suggestBestBefore(known, todayISO());
+  const learned = known?.mhd_days_count ?? 0;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -40,13 +42,13 @@ export function AddForm({ products, initial, onSaved, notify, onDone }: Props) {
       let product = known;
       if (!product) product = await createProduct({ name: name.trim(), barcode, category });
       else if (barcode && !product.barcode) await updateProduct(product.id, { barcode });
-      await addStock(product.id, quantity, bestBefore || null);
+      await addStock(product.id, quantity, (bestBefore ?? suggested) || null);
       await onSaved();
       notify({ text: `${product.name} +${quantity}` });
       setName('');
       setCategory('Sonstiges');
       setQuantity(1);
-      setBestBefore('');
+      setBestBefore(null);
       onDone?.();
     } catch (err) {
       // Inputs stay as they are so nothing has to be retyped; reload so a retry
@@ -90,8 +92,11 @@ export function AddForm({ products, initial, onSaved, notify, onDone }: Props) {
       </label>
       <label>
         MHD
-        <input type="date" value={bestBefore} onChange={(e) => setBestBefore(e.target.value)} />
+        <input type="date" value={bestBefore ?? suggested} onChange={(e) => setBestBefore(e.target.value)} />
       </label>
+      {bestBefore === null && suggested && (
+        <p className="hint">Vorschlag aus {learned === 1 ? '1 Eintrag' : `${learned} Einträgen`}, bitte prüfen</p>
+      )}
       {error && <p className="error">{error}</p>}
       <div className="actions">
         <button disabled={busy}>Speichern</button>
