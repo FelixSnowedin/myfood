@@ -8,13 +8,15 @@ interface Props {
   listId: string;
   items: ShoppingItem[];
   products: Product[];
+  recipeNames: string[];
   onClose: () => void;
   onFinished: (booked: number) => Promise<void>;
 }
 
-export function FinishSheet({ listId, items, products, onClose, onFinished }: Props) {
+export function FinishSheet({ listId, items, products, recipeNames, onClose, onFinished }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const recipesId = useId();
   const [rows, setRows] = useState<FinishRow[]>(() => initialFinishRows(items, products, todayISO()));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -67,10 +69,11 @@ export function FinishSheet({ listId, items, products, onClose, onFinished }: Pr
         <div className="sheet-body">
           <p className="hint">
             Was in den Bestand soll, mit Menge und optional MHD.
+            {rows.some((r) => r.plannedFor) && ' „Geplant für“ ist aus den Rezepten übernommen.'}
             {rows.some((r) => r.item.product_id && r.bestBefore) && ' MHDs sind aus früheren Einkäufen vorbelegt, bitte prüfen.'}
           </p>
           {rows.map((r, i) => (
-            <fieldset key={r.item.id} className="booking" aria-label={r.item.name}>
+            <fieldset key={r.key} className="booking" aria-label={r.plannedFor ? `${r.item.name} für ${r.plannedFor}` : r.item.name}>
               <label className="check">
                 <input type="checkbox" checked={r.book} onChange={(e) => update(i, { book: e.target.checked })} />
                 <span>
@@ -90,8 +93,19 @@ export function FinishSheet({ listId, items, products, onClose, onFinished }: Pr
                   </label>
                 </div>
               )}
+              {r.book && (
+                <label>
+                  Geplant für
+                  <input list={recipesId} placeholder="nichts geplant" autoComplete="off" aria-label={`Geplant für ${r.item.name}`} value={r.plannedFor} onChange={(e) => update(i, { plannedFor: e.target.value })} />
+                </label>
+              )}
             </fieldset>
           ))}
+          <datalist id={recipesId}>
+            {recipeNames.map((n) => (
+              <option key={n} value={n} />
+            ))}
+          </datalist>
         </div>
         <footer className="sheet-foot">
           {error && <p className="error">{error}</p>}

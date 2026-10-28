@@ -1,5 +1,6 @@
 import { CATEGORIES, categoryOf } from './categories';
 import { lowStock, suggestBestBefore } from './inventory';
+import { reservedTotal } from './recipes';
 import type { Booking, Product, ShoppingItem, StockItem } from './types';
 
 export interface Suggestion {
@@ -37,24 +38,29 @@ export function arrangeList(items: ShoppingItem[], products: Product[]): { open:
 }
 
 export interface FinishRow {
+  key: string;
   item: ShoppingItem;
   book: boolean;
   quantity: number;
   bestBefore: string; // '' = no date
+  plannedFor: string; // '' = nothing planned
 }
 
-/** Rows of the finish sheet: checked items; products are booked by default with a suggested MHD, free text is not. */
+/** Rows of the finish sheet: checked items, one row per recipe they are reserved for plus one for the
+ * free rest; products are booked by default with a suggested MHD, free text is not. */
 export function initialFinishRows(items: ShoppingItem[], products: Product[], today: string): FinishRow[] {
   return items
     .filter((item) => item.checked)
-    .map((item) => ({
-      item,
-      book: item.product_id !== null,
-      quantity: item.quantity,
-      bestBefore: suggestBestBefore(products.find((p) => p.id === item.product_id), today),
-    }));
+    .flatMap((item) => {
+      const free = item.quantity - reservedTotal(item);
+      const parts: [string, number][] = [...Object.entries(item.reserved ?? {}), ...(free > 0 ? [['', free] as [string, number]] : [])];
+      const bestBefore = suggestBestBefore(products.find((p) => p.id === item.product_id), today);
+      return parts.map(([plannedFor, quantity]) => ({ key: `${item.id}|${plannedFor}`, item, book: item.product_id !== null, quantity, bestBefore, plannedFor }));
+    });
 }
 
 export function buildBookings(rows: FinishRow[]): Booking[] {
-  return rows.filter((r) => r.book).map((r) => ({ item_id: r.item.id, quantity: r.quantity, best_before: r.bestBefore || null }));
+  return rows
+    .filter((r) => r.book)
+    .map((r) => ({ item_id: r.item.id, quantity: r.quantity, best_before: r.bestBefore || null, planned_for: r.plannedFor.trim() || null }));
 }

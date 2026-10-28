@@ -115,3 +115,26 @@ button.icon { background: transparent; color: var(--text); min-width: 44px; min-
 .booking { min-width: 0; margin: 0; padding: 0 0 12px; border: 0; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
 .booking .check { min-height: 44px; color: var(--text); }
 .booking .check input { flex: none; width: 22px; height: 22px; }
+
+/* Rezepte */
+.suggest { display: grid; gap: 4px; margin: -4px 0 12px; }
+.suggest-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 48px; background: var(--card); color: var(--text); border: 1px solid var(--accent); text-align: left; }
+.suggest-row small { color: var(--muted); font-weight: 400; }
+/* One line of chips that scrolls sideways and never grows taller. */
+.recipes { display: flex; align-items: center; gap: 8px; overflow-x: auto; margin: 0 -16px 12px; padding: 0 16px; scrollbar-width: none; }
+.recipes .label { flex: none; color: var(--muted); font-size: .9rem; }
+.recipes .chip { flex: none; white-space: nowrap; }
+.chip.new { color: var(--accent); border-style: dashed; }
+.idea { margin-bottom: 8px; }
+.idea h2 { margin: 0; }
+.for-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 16px; color: var(--muted); }
+.item .tag { display: block; font-size: .8rem; color: var(--muted); }
+.ings { display: grid; }
+.ing { min-height: 52px; }
+.ing + .ing { border-top: 1px solid var(--line); }
+.ing input { flex: none; width: 22px; height: 22px; }
+.ing-name { flex: 1; min-width: 0; display: grid; overflow-wrap: anywhere; }
+.ing-name small { color: var(--muted); }
+.ing .qty { color: var(--muted); font-variant-numeric: tabular-nums; }
+.add-item.flush { margin: 0; }
+.sheet-foot button.danger { flex: none; background: transparent; color: var(--red); }

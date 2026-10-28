@@ -60,8 +60,18 @@ describe('finish rows', () => {
     const rows = initialFinishRows(items, [], '2026-10-28');
     rows[1] = { ...rows[1], book: true, bestBefore: '2026-11-01' };
     expect(buildBookings(rows)).toEqual([
-      { item_id: 'i1', quantity: 2, best_before: null },
-      { item_id: 'i2', quantity: 1, best_before: '2026-11-01' },
+      { item_id: 'i1', quantity: 2, best_before: null, planned_for: null },
+      { item_id: 'i2', quantity: 1, best_before: '2026-11-01', planned_for: null },
     ]);
+  });
+  it('splits an item into one row per recipe it is reserved for plus the free rest', () => {
+    const hack = { ...i('i1', 'Hackfleisch', 'p1', 3, true), reserved: { Lasagne: 1, Chili: 1 } };
+    const rows = initialFinishRows([hack], [], '2026-10-28');
+    expect(rows.map((r) => [r.key, r.quantity, r.plannedFor])).toEqual([
+      ['i1|Lasagne', 1, 'Lasagne'],
+      ['i1|Chili', 1, 'Chili'],
+      ['i1|', 1, ''],
+    ]);
+    expect(buildBookings(rows).map((b) => b.planned_for)).toEqual(['Lasagne', 'Chili', null]);
   });
 });

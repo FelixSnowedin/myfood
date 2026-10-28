@@ -44,10 +44,27 @@ export interface ShoppingItem {
   quantity: number;
   checked: boolean;
   created_at: string;
+  // Recipe name → quantity reserved for it; the rest is free. Missing until supabase/2026-10-28-rezepte.sql has been run.
+  reserved?: Record<string, number>;
 }
 
 export interface Booking {
   item_id: string;
   quantity: number;
   best_before: string | null;
+  planned_for: string | null;
+}
+
+export interface RecipeIngredient {
+  product_id: string | null; // null = free text
+  name: string;
+  quantity: number;
+}
+
+export interface Recipe {
+  id: string;
+  name: string;
+  items: RecipeIngredient[];
+  last_used_at: string | null;
+  created_at: string;
 }

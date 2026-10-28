@@ -1,25 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { loadListItems, openList } from './api';
+import { loadListItems, loadRecipes, openList } from './api';
 import { supabase } from './supabase';
-import type { ShoppingItem } from './types';
+import type { Recipe, ShoppingItem } from './types';
 
 let channelCount = 0;
 
-// Same pattern as useInventory: any change reloads the open list.
+// Same pattern as useInventory: any change reloads the open list (and the recipes).
 export function useShopping() {
   const [listId, setListId] = useState<string | null>(null);
   const [items, setItems] = useState<ShoppingItem[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [recipesError, setRecipesError] = useState<string | null>(null);
   const latest = useRef(0);
 
   const reload = useCallback(async () => {
     const call = ++latest.current; // only the newest reload may write state
     try {
-      const id = await openList();
+      // Recipes failing (SQL not run yet) must not take the shopping list down with them.
+      const [id, recipeResult] = await Promise.all([openList(), loadRecipes().then((r) => r, (e: Error) => e)]);
       const rows = await loadListItems(id);
       if (call !== latest.current) return;
       setListId(id);
       setItems(rows);
+      setRecipes(recipeResult instanceof Error ? [] : recipeResult);
+      setRecipesError(recipeResult instanceof Error ? recipeResult.message : null);
       setError(null);
     } catch (e) {
       if (call === latest.current) setError((e as Error).message);
@@ -32,6 +37,7 @@ export function useShopping() {
       .channel(`shopping-${++channelCount}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_lists' }, () => void reload())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items' }, () => void reload())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'recipes' }, () => void reload())
       .subscribe((status, err) => {
         // Rejoins (after sleep/offline) don't replay missed changes, so catch up.
         if (status === 'SUBSCRIBED') void reload();
@@ -42,5 +48,5 @@ export function useShopping() {
     };
   }, [reload]);
 
-  return { listId, items, error, reload };
+  return { listId, items, recipes, error, recipesError, reload };
 }
