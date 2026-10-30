@@ -54,8 +54,9 @@ export function findProductByName(products: Product[], name: string): Product | 
   return products.find((p) => p.name.trim().toLowerCase() === wanted);
 }
 
+/** Free stock before stock planned for something ("Geplant für"), then the soonest MHD. */
 export function pickConsumeTarget(stock: StockItem[], productId: string): StockItem | undefined {
-  return stock.filter((s) => s.product_id === productId).sort(byDate)[0];
+  return stock.filter((s) => s.product_id === productId).sort((a, b) => Number(!!a.planned_for) - Number(!!b.planned_for) || byDate(a, b))[0];
 }
 
 export interface LowStock {

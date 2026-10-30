@@ -1,12 +1,12 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { deleteRecipe, saveRecipe } from '../api';
 import { findProductByName } from '../inventory';
-import { findSimilarRecipe } from '../recipes';
+import { findSameRecipe, findSimilarRecipe, norm } from '../recipes';
 import type { Notify, Product, Recipe, RecipeIngredient, ShoppingItem, Toast } from '../types';
 
 interface Props {
   recipe: Recipe | null; // null = new
-  draft?: { name: string; items: RecipeIngredient[] }; // prefill for a new one, e.g. from a recipe idea
+  draft?: { name: string; items: RecipeIngredient[] }; // prefilled ingredients, e.g. from a recipe idea
   recipes: Recipe[];
   products: Product[];
   items: ShoppingItem[];
@@ -22,7 +22,9 @@ export function RecipeEditor({ recipe, draft, recipes, products, items, notify, 
   const titleId = useId();
   const listId = useId();
   const [name, setName] = useState(recipe?.name ?? draft?.name ?? '');
-  const [ingredients, setIngredients] = useState<RecipeIngredient[]>(recipe?.items ?? draft?.items ?? []);
+  const [ingredients, setIngredients] = useState<RecipeIngredient[]>(draft?.items ?? recipe?.items ?? []);
+  // Name the user already confirmed despite a similar recipe (normalized).
+  const [confirmed, setConfirmed] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -67,8 +69,14 @@ export function RecipeEditor({ recipe, draft, recipes, products, items, notify, 
   function save(e: FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
-    const dupe = findSimilarRecipe(recipes, trimmed, recipe?.id);
-    if (dupe) return setError(`Gibt es schon: „${dupe.name}“`);
+    const same = findSameRecipe(recipes, trimmed, recipe?.id);
+    if (same) return setError(`Gibt es schon: „${same.name}“`);
+    // Similar is only a warning: „Chili“ next to „Chili con carne“ can be meant.
+    const similar = findSimilarRecipe(recipes, trimmed, recipe?.id);
+    if (similar && confirmed !== norm(trimmed) && norm(trimmed) !== norm(recipe?.name ?? '')) {
+      setConfirmed(norm(trimmed));
+      return setError(`Ähnlich wie „${similar.name}“. Nochmal speichern, um es trotzdem so anzulegen.`);
+    }
     void act(() => saveRecipe(recipe?.id ?? null, { name: trimmed, items: ingredients }), { text: `„${trimmed}“ gespeichert` });
   }
 
@@ -164,7 +172,7 @@ export function RecipeEditor({ recipe, draft, recipes, products, items, notify, 
           <button type="button" className="secondary" disabled={busy} onClick={onClose}>
             Abbrechen
           </button>
-          <button disabled={busy || !ingredients.length}>Speichern</button>
+          <button disabled={busy || !ingredients.length}>{confirmed && confirmed === norm(name) ? 'Trotzdem speichern' : 'Speichern'}</button>
         </footer>
       </form>
     </dialog>

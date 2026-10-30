@@ -1,16 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
   currentPlan,
+  findSameRecipe,
   findSimilarRecipe,
   itemTag,
   norm,
   planLines,
   planRecipe,
+  plannedAliases,
   plannedRecipes,
   recentRecipes,
   recipeIdeas,
   searchRecipes,
   shrinkReserved,
+  similar,
 } from './recipes';
 import type { Product, Recipe, ShoppingItem, StockItem } from './types';
 
@@ -35,6 +38,19 @@ describe('norm and similar names', () => {
     expect(findSimilarRecipe(recipes, 'Chili')?.id).toBe('2');
     expect(findSimilarRecipe(recipes, 'Risotto')).toBeUndefined();
     expect(findSimilarRecipe(recipes, 'Lasagne', '1')).toBeUndefined();
+  });
+  it('compares word by word: typos only inside longer words, no partial words', () => {
+    expect(similar('chili con carne', 'chili sin carne')).toBe(false);
+    expect(similar('pizza', 'pizza freitag')).toBe(true);
+    expect(similar('reis', 'reissalat')).toBe(false);
+    expect(similar('gemusecurry', 'gemuesecurry')).toBe(true);
+    expect(similar('', 'pizza')).toBe(false);
+  });
+  it('prefers the recipe with the same name over a merely similar one', () => {
+    const recipes = [r('1', 'Chili con carne'), r('2', 'Chili')];
+    expect(findSimilarRecipe(recipes, 'chili!')?.id).toBe('2');
+    expect(findSameRecipe(recipes, 'Chili sin carne')).toBeUndefined();
+    expect(findSameRecipe(recipes, ' chili CON carne')?.id).toBe('1');
   });
 });
 
@@ -72,6 +88,14 @@ describe('planRecipe', () => {
     const rows = planRecipe(lasagne, products, [], [i('i1', 'Mozzarella', 'mozz', 1)]);
     expect(rows[2]).toMatchObject({ checked: true, add: 1, note: '1× schon auf dem Zettel' });
   });
+  it('counts what is already planned for this recipe (also under a similar text) and leaves it alone', () => {
+    const stock = [s('a', 'mozz', 1, 'lasagna am Sonntag'), s('b', 'mozz', 1, 'Pizza')];
+    const items = [i('i1', 'Hackfleisch', 'hack', 1, { Lasagne: 1 })];
+    const rows = planRecipe(lasagne, products, stock, items);
+    expect(rows[0]).toMatchObject({ mine: 1, checked: false, note: '1× schon für Lasagne vorgemerkt' });
+    expect(rows[2]).toMatchObject({ mine: 1, checked: true, add: 1, note: '1× schon für Lasagne vorgemerkt · 1× im Bestand für Pizza' });
+    expect(planLines(rows).slice(0, 3).map((l) => [l.add, l.quantity])).toEqual([[0, 0], [1, 1], [1, 1]]);
+  });
   it('matches free-text ingredients to products by name', () => {
     const recipe = r('2', 'X', [[null, 'zwiebeln', 1]]);
     expect(planRecipe(recipe, products, [s('a', 'zw', 1)], [])[0]).toMatchObject({ checked: false, product: { id: 'zw' } });
@@ -95,8 +119,21 @@ describe('current plan and planned recipes', () => {
       { product_id: 'zw', name: 'Zwiebeln', add: 0, quantity: 1 },
     ]);
   });
-  it('lists recipes from open items and stock, stock only for known recipe names', () => {
+  it('lists recipes from open items and stock, stock only for texts that mean a recipe', () => {
     expect(plannedRecipes([r('1', 'Lasagne')], items, stock)).toEqual(['Chili', 'Lasagne']);
+    const lasagnaOnly = [s('a', 'zw', 1, 'lasagna am Sonntag')];
+    expect(plannedRecipes([r('1', 'Lasagne')], [], lasagnaOnly)).toEqual(['Lasagne']);
+  });
+  it('finds other texts meaning a recipe and includes them in its current plan', () => {
+    const withAlias = [...stock, s('d', 'mozz', 2, 'lasagna am Sonntag')];
+    const recipes = [r('1', 'Lasagne'), r('2', 'Pizza')];
+    expect(plannedAliases(recipes, 'Lasagne', withAlias)).toEqual(['lasagna am Sonntag']);
+    expect(plannedAliases(recipes, 'Pizza', withAlias)).toEqual([]);
+    expect(currentPlan('Lasagne', [], withAlias, products, ['lasagna am Sonntag']).map((l) => [l.name, l.quantity])).toEqual([
+      ['Zwiebeln', 1],
+      ['Hackfleisch', 1],
+      ['Mozzarella', 2],
+    ]);
   });
 });
 
@@ -118,14 +155,23 @@ describe('recipeIdeas', () => {
   it('suggests a recipe from 2+ products planned for a similar text', () => {
     const stock = [s('a', 'mozz', 1, 'Pizza'), s('b', 'tom', 2, 'pizza am Freitag'), s('c', 'zw', 1, 'Suppe')];
     expect(recipeIdeas(products, stock, [], new Set())).toEqual([
-      { key: 'pizza', name: 'Pizza', items: [{ product_id: 'mozz', name: 'Mozzarella', quantity: 1 }, { product_id: 'tom', name: 'Tomaten', quantity: 2 }] },
+      { kind: 'new', key: 'pizza', name: 'Pizza', items: [{ product_id: 'mozz', name: 'Mozzarella', quantity: 1 }, { product_id: 'tom', name: 'Tomaten', quantity: 2 }] },
     ]);
   });
-  it('needs two different products, skips existing recipes and dismissed ideas', () => {
+  it('needs two different products for a new recipe and skips dismissed ideas', () => {
     const twice = [s('a', 'mozz', 1, 'Pizza'), s('b', 'mozz', 1, 'Pizza')];
     expect(recipeIdeas(products, twice, [], new Set())).toEqual([]);
     const stock = [s('a', 'mozz', 1, 'Lasagna'), s('b', 'tom', 1, 'Lasagne')];
-    expect(recipeIdeas(products, stock, [r('1', 'Lasagne')], new Set())).toEqual([]);
     expect(recipeIdeas(products, stock, [], new Set(['lasagna']))).toEqual([]);
+  });
+  it('suggests extending an existing recipe with products planned for it but missing in it', () => {
+    const lasagne = r('1', 'Lasagne', [['mozz', 'Mozzarella', 2]]);
+    const stock = [s('a', 'mozz', 1, 'Lasagne'), s('b', 'tom', 2, 'lasagna am Sonntag'), s('c', 'zw', 1, 'Lasagne')];
+    const ideas = recipeIdeas(products, stock, [lasagne], new Set());
+    expect(ideas.map((x) => [x.kind, x.key, x.name, x.items.map((i) => i.name)])).toEqual([['extend', '1:tom,zw', 'Lasagne', ['Tomaten', 'Zwiebeln']]]);
+    expect(recipeIdeas(products, stock, [lasagne], new Set(['1:tom,zw']))).toEqual([]);
+    // a further missing product brings the idea back
+    const more = [...stock, s('d', 'hack', 1, 'Lasagne')];
+    expect(recipeIdeas(products, more, [lasagne], new Set(['1:tom,zw'])).map((x) => x.key)).toEqual(['1:hack,tom,zw']);
   });
 });

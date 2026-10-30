@@ -67,6 +67,11 @@ describe('pickConsumeTarget', () => {
     const stock = [s('a', 'p1', 1, null), s('b', 'p1', 1, '2026-11-01'), s('c', 'p1', 1, '2026-10-20'), s('d', 'p2', 1, '2026-10-01')];
     expect(pickConsumeTarget(stock, 'p1')?.id).toBe('c');
   });
+  it('takes free stock before stock planned for something, even with a later date', () => {
+    const stock = [{ ...s('a', 'p1', 1, '2026-10-10'), planned_for: 'Lasagne' }, s('b', 'p1', 1, '2026-11-01')];
+    expect(pickConsumeTarget(stock, 'p1')?.id).toBe('b');
+    expect(pickConsumeTarget(stock.slice(0, 1), 'p1')?.id).toBe('a');
+  });
   it('returns undefined without stock', () => {
     expect(pickConsumeTarget([], 'p1')).toBeUndefined();
   });

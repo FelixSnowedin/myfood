@@ -12,7 +12,11 @@ async function run<T>(query: PromiseLike<{ data: unknown; error: { message: stri
 function friendly(error: { message: string; code?: string }): string {
   // SQL file not run yet: functions/tables/columns unknown to PostgREST or Postgres.
   if (['PGRST202', 'PGRST204', 'PGRST205', '42P01', '42703', '42883'].includes(error.code ?? '')) {
-    const file = /recipe|reserved/.test(error.message) ? '2026-10-28-rezepte.sql' : '2026-10-18-einkaufszettel.sql';
+    const file = /update_recipe|recipe_ideas|p_also/.test(error.message)
+      ? '2026-10-30-rezepte-nachbesserungen.sql'
+      : /recipe|reserved/.test(error.message)
+        ? '2026-10-28-rezepte.sql'
+        : '2026-10-18-einkaufszettel.sql';
     return `Datenbank noch nicht eingerichtet: supabase/${file} im Supabase SQL Editor ausführen.`;
   }
   if (error.code !== '23505') return error.message;
@@ -87,12 +91,18 @@ export const loadArchive = () =>
 // --- Rezepte ---
 
 export const loadRecipes = () => run<Recipe[]>(supabase.from('recipes').select('*'));
+/** Updating renames reservations and "Geplant für" along with the recipe. */
 export const saveRecipe = (id: string | null, recipe: Pick<Recipe, 'name' | 'items'>) =>
   id
-    ? updateOne('recipes', id, recipe, 'Das Rezept gibt es nicht mehr.')
+    ? run<null>(supabase.rpc('update_recipe', { p_id: id, p_name: recipe.name, p_items: recipe.items }))
     : run<null>(supabase.from('recipes').insert({ ...recipe, last_used_at: new Date().toISOString() })); // new ones show up under „Zuletzt“
 export const deleteRecipe = (id: string) => run<null>(supabase.from('recipes').delete().eq('id', id));
 /** Puts what is missing on the list and reserves the rest from free list quantity and stock, all for this recipe. */
 export const planRecipe = (name: string, lines: PlanLine[]) => run<null>(supabase.rpc('plan_recipe', { p_recipe: name, p_items: lines }));
-/** Reserved quantity leaves the list (not what is in the cart), stock planned for the recipe becomes free. */
-export const unplanRecipe = (name: string) => run<null>(supabase.rpc('unplan_recipe', { p_recipe: name }));
+/** Reserved quantity leaves the list (not what is in the cart), stock planned for the recipe or one of
+ * its aliases (other "Geplant für" texts meaning it) becomes free. */
+export const unplanRecipe = (name: string, aliases: string[] = []) =>
+  run<null>(supabase.rpc('unplan_recipe', aliases.length ? { p_recipe: name, p_also: aliases } : { p_recipe: name }));
+export const loadDismissedIdeas = async () =>
+  new Set((await run<{ key: string }[]>(supabase.from('recipe_ideas_dismissed').select('key'))).map((r) => r.key));
+export const dismissIdea = (key: string) => run<null>(supabase.from('recipe_ideas_dismissed').upsert({ key }));

@@ -16,7 +16,7 @@ export function norm(s: string): string {
   return s
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/ß/g, 'ss')
     .replace(/[^a-z0-9]+/g, ' ')
     .replace(/\b(fur|fuer|zum|zur|am|an|das|die|der|den)\b/g, ' ')
@@ -34,17 +34,34 @@ function distance(a: string, b: string): number {
   return prev[b.length];
 }
 
-// ponytail: rough similarity (equal, one contains the other, 1–2 typos) – enough to catch duplicates.
-/** Compares two already normalized names. */
+// A typo counts only inside a longer word: „lasagna“ ~ „lasagne“, but „sin“ ≠ „con“.
+const sameWord = (a: string, b: string) => a === b || (Math.min(a.length, b.length) >= 5 && distance(a, b) <= 1);
+
+/** Compares two already normalized names word by word: every word of the shorter name must appear
+ * in the longer one („pizza“ ~ „pizza freitag“, „chili con carne“ ≠ „chili sin carne“). */
 export function similar(a: string, b: string): boolean {
   if (!a || !b) return false;
-  if (a === b) return true;
-  if (Math.min(a.length, b.length) >= 4 && (a.includes(b) || b.includes(a))) return true;
-  return distance(a, b) <= (Math.max(a.length, b.length) >= 6 ? 2 : 1);
+  const [short, long] = [a.split(' '), b.split(' ')].sort((x, y) => x.length - y.length);
+  return short.every((w) => long.some((x) => sameWord(w, x)));
 }
 
+/** Same name after cleaning – such a recipe must not be created twice. */
+export const findSameRecipe = (recipes: Recipe[], name: string, exceptId?: string) =>
+  recipes.find((r) => r.id !== exceptId && norm(r.name) === norm(name));
+
+/** Same name if there is one, else a similar one. */
 export const findSimilarRecipe = (recipes: Recipe[], name: string, exceptId?: string) =>
-  recipes.find((r) => r.id !== exceptId && similar(norm(r.name), norm(name)));
+  findSameRecipe(recipes, name, exceptId) ?? recipes.find((r) => r.id !== exceptId && similar(norm(r.name), norm(name)));
+
+/** The recipe a "Geplant für" text means, if any. */
+const recipeFor = (recipes: Recipe[], plannedFor: string | null) => (plannedFor ? findSimilarRecipe(recipes, plannedFor) : undefined);
+
+/** Other "Geplant für" texts in stock that mean this recipe (e.g. „pizza am Freitag“ for „Pizza“). */
+export function plannedAliases(recipes: Recipe[], name: string, stock: StockItem[]): string[] {
+  const aliases = new Set<string>();
+  for (const s of stock) if (s.planned_for && s.planned_for !== name && recipeFor(recipes, s.planned_for)?.name === name) aliases.add(s.planned_for);
+  return [...aliases];
+}
 
 /** The most recently used recipes first; never used ones by name. */
 export function recentRecipes(recipes: Recipe[], count: number): Recipe[] {
@@ -73,40 +90,50 @@ export interface PlanRow {
   ingredient: RecipeIngredient;
   product?: Product;
   free: number; // unreserved in stock and on the list
+  mine: number; // already planned for this recipe (stock, also under a similar text, and list)
   add: number; // what goes on the list when checked
   checked: boolean; // by default only what is not free yet
   note: string;
 }
 
-/** Per ingredient: free means stock without "Geplant für" and list quantity not reserved for a recipe. */
+/** Per ingredient: what is already planned for this recipe counts as there; free means stock without
+ * "Geplant für" and list quantity not reserved for a recipe; everything else belongs to other plans. */
 export function planRecipe(recipe: Recipe, products: Product[], stock: StockItem[], items: ShoppingItem[]): PlanRow[] {
+  const key = norm(recipe.name);
+  const isMine = (plannedFor: string) => plannedFor === recipe.name || similar(norm(plannedFor), key);
   return recipe.items.map((ingredient) => {
     const product = productOf(products, ingredient);
     const rows = product ? stock.filter((s) => s.product_id === product.id) : [];
     const item = openItemOf(items, product, ingredient.name);
+    const reserved = Object.entries(item?.reserved ?? {});
     const freeStock = rows.filter((s) => !s.planned_for).reduce((a, s) => a + s.quantity, 0);
     const freeList = item ? item.quantity - reservedTotal(item) : 0;
-    const need = Math.max(0, ingredient.quantity - freeStock - freeList);
+    const mineStock = rows.filter((s) => s.planned_for && isMine(s.planned_for)).reduce((a, s) => a + s.quantity, 0);
+    const mineList = reserved.filter(([name]) => isMine(name)).reduce((a, [, q]) => a + q, 0);
+    const mine = mineStock + mineList;
+    const need = Math.max(0, ingredient.quantity - mine - freeStock - freeList);
     const notes = [
+      ...(mine ? [`${mine}× schon für ${recipe.name} vorgemerkt`] : []),
       ...(freeStock ? [`${freeStock}× im Bestand`] : []),
       ...(freeList ? [`${freeList}× schon auf dem Zettel`] : []),
-      ...rows.filter((s) => s.planned_for).map((s) => `${s.quantity}× im Bestand für ${s.planned_for}`),
-      ...Object.entries(item?.reserved ?? {}).map(([name, q]) => `${q}× auf dem Zettel für ${name}`),
+      ...rows.filter((s) => s.planned_for && !isMine(s.planned_for)).map((s) => `${s.quantity}× im Bestand für ${s.planned_for}`),
+      ...reserved.filter(([name]) => !isMine(name)).map(([name, q]) => `${q}× auf dem Zettel für ${name}`),
     ];
-    return { ingredient, product, free: freeStock + freeList, add: need || ingredient.quantity, checked: need > 0, note: notes.join(' · ') };
+    return { ingredient, product, free: freeStock + freeList, mine, add: need || ingredient.quantity, checked: need > 0, note: notes.join(' · ') };
   });
 }
 
+/** What is already planned for the recipe is left alone; only the rest is added or reserved. */
 export const planLines = (rows: PlanRow[]): PlanLine[] =>
   rows.map((r) => ({
     product_id: r.product?.id ?? null,
     name: r.product?.name ?? r.ingredient.name,
     add: r.checked ? r.add : 0,
-    quantity: r.ingredient.quantity,
+    quantity: Math.max(r.ingredient.quantity - r.mine, r.checked ? r.add : 0),
   }));
 
-/** What is planned for a recipe right now, as plan lines – to undo a change to that plan. */
-export function currentPlan(name: string, items: ShoppingItem[], stock: StockItem[], products: Product[]): PlanLine[] {
+/** What is planned for a recipe right now (stock also under its aliases), as plan lines – to undo a change to that plan. */
+export function currentPlan(name: string, items: ShoppingItem[], stock: StockItem[], products: Product[], aliases: string[] = []): PlanLine[] {
   const lines = new Map<string, PlanLine>();
   const put = (productId: string | null, itemName: string, add: number, quantity: number) => {
     const key = productId ?? itemName.trim().toLowerCase();
@@ -119,17 +146,19 @@ export function currentPlan(name: string, items: ShoppingItem[], stock: StockIte
   }
   for (const s of stock) {
     const product = products.find((p) => p.id === s.product_id);
-    if (s.planned_for === name && product) put(product.id, product.name, 0, s.quantity);
+    if (s.planned_for && (s.planned_for === name || aliases.includes(s.planned_for)) && product) put(product.id, product.name, 0, s.quantity);
   }
   return [...lines.values()];
 }
 
-/** Recipes something is planned for: reserved on the open list or "Geplant für" in stock. */
+/** Recipes something is planned for: reserved on the open list, or "Geplant für" in stock that means a recipe. */
 export function plannedRecipes(recipes: Recipe[], items: ShoppingItem[], stock: StockItem[]): string[] {
   const names = new Set<string>();
   for (const i of items) if (!i.checked) Object.keys(i.reserved ?? {}).forEach((n) => names.add(n));
-  const known = new Set(recipes.map((r) => r.name));
-  for (const s of stock) if (s.planned_for && known.has(s.planned_for)) names.add(s.planned_for);
+  for (const s of stock) {
+    const recipe = recipeFor(recipes, s.planned_for);
+    if (recipe) names.add(recipe.name);
+  }
   return [...names].sort((a, b) => a.localeCompare(b, 'de'));
 }
 
@@ -156,28 +185,45 @@ export function shrinkReserved(reserved: Record<string, number> = {}, quantity: 
   return next;
 }
 
-export interface RecipeIdea {
-  key: string; // normalized, for dismissing
+export type RecipeIdea =
+  // new recipe from what is planned for the same (similar) text
+  | { kind: 'new'; key: string; name: string; items: RecipeIngredient[] }
+  // existing recipe: products planned for it that it does not contain yet
+  | { kind: 'extend'; key: string; name: string; recipe: Recipe; items: RecipeIngredient[] };
+
+interface IdeaGroup {
+  key: string;
   name: string;
-  items: RecipeIngredient[];
+  recipe?: Recipe;
+  items: Map<string, RecipeIngredient>;
 }
 
-/** At least 2 different products in stock planned for a similar text that is no recipe yet. */
+const inRecipe = (recipe: Recipe, product: Product) =>
+  recipe.items.some((i) => i.product_id === product.id || i.name.trim().toLowerCase() === product.name.trim().toLowerCase());
+
+/** New: at least 2 different products planned for a similar text that is no recipe yet.
+ * Extend: products planned for an existing recipe that are not in it. Keys are for dismissing. */
 export function recipeIdeas(products: Product[], stock: StockItem[], recipes: Recipe[], dismissed: ReadonlySet<string>): RecipeIdea[] {
-  const groups: { key: string; name: string; items: Map<string, RecipeIngredient> }[] = [];
+  const groups: IdeaGroup[] = [];
   for (const s of stock) {
     const product = products.find((p) => p.id === s.product_id);
     const key = s.planned_for ? norm(s.planned_for) : '';
-    if (!product || !key || findSimilarRecipe(recipes, key)) continue;
-    let group = groups.find((g) => similar(g.key, key));
+    if (!product || !key) continue;
+    const recipe = recipeFor(recipes, s.planned_for);
+    if (recipe && inRecipe(recipe, product)) continue;
+    let group = recipe ? groups.find((g) => g.recipe === recipe) : groups.find((g) => !g.recipe && similar(g.key, key));
     if (!group) {
-      const name = s.planned_for!.trim();
-      groups.push((group = { key, name: name[0].toUpperCase() + name.slice(1), items: new Map() }));
+      const name = recipe?.name ?? s.planned_for!.trim();
+      groups.push((group = { key, name: name[0].toUpperCase() + name.slice(1), recipe, items: new Map() }));
     }
     const prev = group.items.get(product.id);
     group.items.set(product.id, { product_id: product.id, name: product.name, quantity: (prev?.quantity ?? 0) + s.quantity });
   }
-  return groups
-    .filter((g) => g.items.size >= 2 && !dismissed.has(g.key))
-    .map((g) => ({ key: g.key, name: g.name, items: [...g.items.values()] }));
+  return groups.flatMap((g): RecipeIdea[] => {
+    const items = [...g.items.values()];
+    if (!g.recipe) return items.length >= 2 && !dismissed.has(g.key) ? [{ kind: 'new', key: g.key, name: g.name, items }] : [];
+    // new missing products show the idea again
+    const key = `${g.recipe.id}:${[...g.items.keys()].sort().join(',')}`;
+    return dismissed.has(key) ? [] : [{ kind: 'extend', key, name: g.recipe.name, recipe: g.recipe, items }];
+  });
 }

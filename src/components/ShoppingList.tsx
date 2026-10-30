@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { addToList, deleteItem, planRecipe, restoreItem, unplanRecipe, updateItem } from '../api';
+import { addToList, deleteItem, dismissIdea, planRecipe, restoreItem, unplanRecipe, updateItem } from '../api';
 import { findProductByName } from '../inventory';
-import { currentPlan, itemTag, norm, plannedRecipes, recentRecipes, recipeIdeas, searchRecipes, shrinkReserved, type RecipeIdea } from '../recipes';
+import { currentPlan, itemTag, norm, plannedAliases, plannedRecipes, recentRecipes, recipeIdeas, searchRecipes, shrinkReserved, type RecipeIdea } from '../recipes';
 import { arrangeList, suggestions } from '../shopping';
 import type { Notify, Product, Recipe, ShoppingItem, StockItem } from '../types';
 import { useShopping } from '../useShopping';
@@ -20,24 +20,13 @@ interface Props {
 const ADD = 'add';
 const SUGGESTIONS = 'suggestions';
 const RECENT = 3; // recipes as chips; the rest is found by typing
-const DISMISSED = 'myfood.dismissedRecipeIdeas';
 
 type Sheet = { kind: 'plan'; recipe: Recipe } | { kind: 'edit'; recipe: Recipe | null; draft?: RecipeIdea };
 
-// ponytail: dismissed ideas are a per-device convenience, so localStorage
-function loadDismissed(): Set<string> {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(DISMISSED) ?? '[]'));
-  } catch {
-    return new Set();
-  }
-}
-
 export function ShoppingList({ products, stock, notify, onStockChanged }: Props) {
-  const { listId, items, recipes, error, recipesError, reload } = useShopping();
+  const { listId, items, recipes, dismissed, error, recipesError, reload } = useShopping();
   const [text, setText] = useState('');
   const [sheet, setSheet] = useState<Sheet | null>(null);
-  const [dismissed, setDismissed] = useState(loadDismissed);
   // Id of the list being finished; the sheet disappears if that list was finished elsewhere meanwhile.
   const [finishing, setFinishing] = useState<string | null>(null);
   const [archive, setArchive] = useState(false);
@@ -123,9 +112,10 @@ export function ShoppingList({ products, stock, notify, onStockChanged }: Props)
   }
 
   function unplan(name: string) {
-    const prior = currentPlan(name, items, stock, products);
+    const aliases = plannedAliases(recipes, name, stock);
+    const prior = currentPlan(name, items, stock, products, aliases); // undo plans it all under the recipe's name
     void act(`plan:${name}`, async () => {
-      await unplanRecipe(name);
+      await unplanRecipe(name, aliases);
       await onStockChanged();
       notify({
         text: `${name} nicht mehr geplant`,
@@ -137,15 +127,8 @@ export function ShoppingList({ products, stock, notify, onStockChanged }: Props)
     });
   }
 
-  function dismiss(idea: RecipeIdea) {
-    const next = new Set(dismissed).add(idea.key);
-    setDismissed(next);
-    try {
-      localStorage.setItem(DISMISSED, JSON.stringify([...next]));
-    } catch {
-      // private mode: dismissed for this visit only
-    }
-  }
+  // For the whole household; act() reloads, so the card disappears.
+  const dismiss = (idea: RecipeIdea) => void act(`idea:${idea.key}`, () => dismissIdea(idea.key));
 
   if (archive) return <Archive onClose={() => showArchive(false)} onCopied={reload} notify={notify} />;
 
@@ -256,18 +239,25 @@ export function ShoppingList({ products, stock, notify, onStockChanged }: Props)
         ideas.map((idea) => (
           <section key={idea.key} className="card idea">
             <div className="low-head">
-              <h2>Rezept erkannt: {idea.name}</h2>
-              <button type="button" className="icon" aria-label={`Idee ${idea.name} verwerfen`} onClick={() => dismiss(idea)}>
+              <h2>{idea.kind === 'new' ? `Rezept erkannt: ${idea.name}` : `${idea.name} ergänzen?`}</h2>
+              <button type="button" className="icon" aria-label={`Idee ${idea.name} verwerfen`} disabled={busy.has(`idea:${idea.key}`)} onClick={() => dismiss(idea)}>
                 ✕
               </button>
             </div>
             <p className="hint">
-              Im Bestand ist „für {idea.name}“ geplant: {idea.items.map((x) => x.name).join(', ')}.
+              {idea.kind === 'new' ? `Im Bestand ist „für ${idea.name}“ geplant: ` : `Im Bestand für ${idea.name} geplant, aber nicht im Rezept: `}
+              {idea.items.map((x) => x.name).join(', ')}.
             </p>
             <div className="actions">
-              <button type="button" onClick={() => setSheet({ kind: 'edit', recipe: null, draft: idea })}>
-                Als Rezept speichern
-              </button>
+              {idea.kind === 'new' ? (
+                <button type="button" onClick={() => setSheet({ kind: 'edit', recipe: null, draft: idea })}>
+                  Als Rezept speichern
+                </button>
+              ) : (
+                <button type="button" onClick={() => setSheet({ kind: 'edit', recipe: idea.recipe, draft: { ...idea, items: [...idea.recipe.items, ...idea.items] } })}>
+                  Zum Rezept hinzufügen
+                </button>
+              )}
             </div>
           </section>
         ))}
@@ -360,7 +350,7 @@ export function ShoppingList({ products, stock, notify, onStockChanged }: Props)
       )}
       {sheet?.kind === 'edit' && (
         <RecipeEditor
-          key={sheet.recipe?.id ?? sheet.draft?.key ?? 'new'}
+          key={sheet.draft?.key ?? sheet.recipe?.id ?? 'new'}
           recipe={sheet.recipe}
           draft={sheet.draft}
           recipes={recipes}
@@ -368,7 +358,7 @@ export function ShoppingList({ products, stock, notify, onStockChanged }: Props)
           items={items}
           notify={notify}
           onClose={() => setSheet(null)}
-          onSaved={reload}
+          onSaved={reloadAll} // a rename moves "Geplant für" in stock too
         />
       )}
     </>

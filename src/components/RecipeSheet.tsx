@@ -42,7 +42,7 @@ export function RecipeSheet({ recipe, products, stock, items, notify, onClose, o
       return;
     }
     const added = rows.filter((r) => r.checked).length;
-    const kept = rows.filter((r) => r.free > 0 && r.ingredient.quantity > (r.checked ? r.add : 0)).length;
+    const kept = rows.filter((r) => r.free > 0 && r.ingredient.quantity - r.mine > (r.checked ? r.add : 0)).length;
     notify({
       text: `${name}: ${added} auf den Zettel${kept ? `, ${kept} vorgemerkt` : ''}`,
       undo: async () => {

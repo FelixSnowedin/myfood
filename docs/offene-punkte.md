@@ -2,17 +2,16 @@
 
 ## Rezepte
 
-### Ähnlichkeitsregel für Rezeptnamen und „Geplant für“ ist grob
-`similar()` in `src/recipes.ts` gilt als gleich bei: identisch (nach Bereinigung), einer enthält den anderen (ab 4 Zeichen) oder höchstens 1–2 Tippfehler.
-„Einer enthält den anderen“ fasst zu viel zusammen: „Chili“ und „Chili sin carne“ gelten als dasselbe Rezept, die Duplikat-Prüfung blockiert dann das zweite.
-Ideen: Wortweise vergleichen statt Teilstring, Schwellen anpassen, bei Ähnlichkeit nachfragen („Meinst du Chili con carne?“) statt hart zu blockieren.
+- Ein Rezept löschen lässt seine Reservierungen auf dem Zettel und „Geplant für“ im Bestand stehen (mit dem alten Namen).
+- „Für X ✕“ rückgängig machen plant ähnliche „Geplant für“-Einträge (z. B. „pizza am Freitag“) unter dem Rezeptnamen („Pizza“) neu ein.
+- Wer ein Rezept zweimal kochen will, muss beim zweiten Planen die Häkchen selbst setzen: schon für das Rezept Vorgemerktes zählt als vorhanden.
 
-### „Geplant für“ passt zu einem Rezept, aber mit anderen Zutaten
-Ist ein „Geplant für“-Wert einem vorhandenen Rezept ähnlich, entsteht keine Rezept-Idee – auch wenn im Bestand Zutaten dafür geplant sind, die das Rezept nicht enthält.
-Idee: vorschlagen, diese Zutaten im Rezept zu ergänzen.
+## Erledigt (2026-10-30)
 
-### Beim Bauen aufgefallen
-- Verbrauchen (Scanner, „Verbraucht“) nimmt die Packung mit dem frühesten MHD, auch wenn sie für ein Rezept vorgemerkt ist und freier Bestand da wäre.
-- Ein Rezept umbenennen ändert bestehende Reservierungen und „Geplant für“-Einträge nicht, die behalten den alten Namen.
-- „Geplant für“-Einträge, die einem Rezeptnamen nur ähneln (z. B. „pizza am Freitag“ bei Rezept „Pizza“), stehen nicht in der „Für“-Leiste und werden beim Ausplanen nicht frei.
-- Weggeklickte Rezept-Ideen gelten nur auf dem Gerät, auf dem sie weggeklickt wurden.
+- Ähnlichkeit wortweise statt Teilstring („Chili con carne“ ≠ „Chili sin carne“, „Reis“ ≠ „Reissalat“). Gleicher Name wird blockiert, ähnlicher nur gewarnt („Trotzdem speichern“).
+- Ist im Bestand etwas für ein vorhandenes Rezept geplant, das nicht drin steht, schlägt der Zettel „Rezept ergänzen?“ vor.
+- Verbrauchen nimmt freien Bestand vor vorgemerktem.
+- Umbenennen eines Rezepts nimmt Reservierungen und „Geplant für“ mit.
+- „Geplant für“-Texte, die ein Rezept meinen, zählen in der „Für“-Leiste und beim Ausplanen dazu.
+- Weggeklickte Rezept-Ideen gelten für den ganzen Haushalt.
+- Schon für ein Rezept Vorgemerktes (auch unter ähnlichem „Geplant für“) zählt beim erneuten Planen als vorhanden.
