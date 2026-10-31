@@ -1,5 +1,18 @@
 # Offene Punkte / Verbesserungsfähiges
 
+## Onboarding (noch zu planen)
+
+Größtes Hindernis für neue Haushalte ist die erste Bestandsaufnahme: Sie dauert lange und braucht Durchhaltevermögen. Geplant ist ein eigener UI-Modus dafür. Ideen zum Klären:
+
+- Raum für Raum bzw. Fach für Fach vorgehen (Vorratskammer, Kühlschrank, Tiefkühler) mit sichtbarem Fortschritt, jederzeit unterbrechbar und später fortsetzbar.
+- Dauerscan: Barcode scannen, Name und Kategorie bestätigen, sofort weiter, ohne dass sich das Formular jedes Mal schließt. MHD optional, später nachtragbar.
+- Schnellerfassung ohne Barcode, z. B. aus einer Liste typischer Vorratsprodukte antippen.
+- Motivation: Zwischenstände, Belohnung beim Abschluss eines Fachs.
+
+## Kategorien
+
+- Leere Kategorien automatisch aus der Filterliste ausblenden. Seit 2026-10-31 gibt es 18 allgemeine Kategorien, im einzelnen Haushalt sind viele davon leer.
+
 ## Rezepte
 
 - Ein Rezept löschen lässt seine Reservierungen auf dem Zettel und „Geplant für“ im Bestand stehen (mit dem alten Namen).
